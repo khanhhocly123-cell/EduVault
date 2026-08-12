@@ -7,7 +7,7 @@ import {
   clearCookie, createJob, currentUser, finishJob, loadWorkspace, login, logout, register,
   saveWorkspace, sessionCookie, sourceFile, storeUpload,
 } from "./backend.mjs";
-import { extractSource } from "./ocr.mjs";
+import { configuredModel, extractSource } from "./ocr.mjs";
 
 const ROOT = resolve(fileURLToPath(new URL("./", import.meta.url)));
 const PORT = Number(process.env.PORT) || 5173;
@@ -78,7 +78,7 @@ async function api(req, res, url) {
       const tier = ["nhanh", "chuan", "ki"].includes(String(form.get("tier"))) ? String(form.get("tier")) : "nhanh";
       const srcLabel = String(form.get("srcLabel") || "").trim().slice(0, 160);
       const source = await storeUpload(user.id, file);
-      const model = process.env.DE_MODEL || "gemini-3.5-flash";
+      const model = configuredModel();
       const jobId = createJob(user.id, source.id, model);
       try {
         const result = await extractSource(source, jobId, { subject, grade, srcLabel });

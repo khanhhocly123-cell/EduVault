@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { mkdir, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,6 +8,20 @@ import { dataDir } from "./backend.mjs";
 
 const WEB = path.dirname(fileURLToPath(import.meta.url));
 const PHASE0 = path.resolve(WEB, "..", "phase0");
+const FALLBACK_MODEL = "gemini-3.5-flash";
+
+export function configuredModel() {
+  const processModel = process.env.DE_MODEL?.trim();
+  if (processModel) return processModel;
+  try {
+    const env = readFileSync(path.join(PHASE0, ".env"), "utf8");
+    const match = /^DE_MODEL\s*=\s*(.+?)\s*$/m.exec(env);
+    const fileModel = match?.[1]?.trim().replace(/^(['"])(.*)\1$/, "$2");
+    return fileModel || FALLBACK_MODEL;
+  } catch {
+    return FALLBACK_MODEL;
+  }
+}
 
 function run(executable, args, cwd) {
   return new Promise((resolve, reject) => {
@@ -34,7 +49,7 @@ export function toAppQuestion(q, source, page, index, options) {
   const topic = q.topic_code || (options.subject === "math" ? "m12.derivative" : "p12.thermal");
   const item = {
     id: randomUUID(), src: source.filename, srcId: source.id, page,
-    model: process.env.DE_MODEL || "gemini-3.5-flash", type: q.type, diff: q.difficulty || "TH",
+    model: configuredModel(), type: q.type, diff: q.difficulty || "TH",
     topic, grade: q.grade || options.grade || 12, stem: q.stem_latex || "", sol: q.solution_latex || "",
     answerSource: q.answer_source || "none", notes: q.notes || null,
     raw: [`Câu ${index + 1}. ${String(q.stem_latex || "").replace(/\$[^$]*\$/g, " ").trim()}`],
@@ -62,7 +77,7 @@ export async function extractSource(source, jobId, options) {
     const tsxCli = path.join(PHASE0, "node_modules", "tsx", "dist", "cli.mjs");
     const cli = path.join(PHASE0, "src", "cli.ts");
     const args = [tsxCli, cli, "extract", pages[i], "--subject", options.subject, "--output", output];
-    if (process.env.DE_MODEL) args.push("--model", process.env.DE_MODEL);
+    args.push("--model", configuredModel());
     await run(process.execPath, args, PHASE0);
     const payload = JSON.parse(await readFile(output, "utf8"));
     const pageQuestions = Array.isArray(payload.questions) ? payload.questions : [];

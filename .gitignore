@@ -17,6 +17,7 @@ phase1/data/
 phase0/out/
 web/data/
 out/
+tmp/
 *.log
 *.sqlite
 *.sqlite-shm
