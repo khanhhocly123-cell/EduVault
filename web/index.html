@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EduVault</title>
+<link rel="stylesheet" href="./styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'><rect width='256' height='256' rx='56' fill='%23e7e5fe'/><g fill='none' stroke='%235d5294' stroke-width='16'><rect x='42' y='80' width='172' height='136' rx='16'/><path d='M72 50h112M58 65h140'/></g></svg>">
+</head>
+<body>
+
+<h1 class="sr-only">EduVault — kho câu hỏi, ráp đề, duyệt và nạp tài liệu</h1>
+
+<header class="topbar">
+  <div class="brand">
+    <svg width="22" height="22" viewBox="0 0 256 256" fill="none" stroke="#5d5294"
+         stroke-width="16" aria-hidden="true">
+      <rect x="32" y="72" width="192" height="152" rx="16"></rect>
+      <path d="M64 40h128M48 56h160"></path>
+    </svg>
+    EduVault
+  </div>
+
+  <nav class="nav" id="tabs" aria-label="Màn hình chính">
+    <button type="button" data-go="home" aria-current="page">Trang chính</button>
+    <button type="button" data-go="kho">Kho câu hỏi</button>
+    <button type="button" data-go="rap">Ráp đề</button>
+    <button type="button" data-go="duyet">Duyệt<span class="badge" id="pendCount">0</span></button>
+    <button type="button" data-go="nguon">Tài liệu</button>
+  </nav>
+
+  <div class="grow"></div>
+
+  <div class="seg" role="group" aria-label="Môn đang làm việc">
+    <button type="button" data-subj="physics" aria-pressed="true">Vật lí</button>
+    <button type="button" data-subj="math" aria-pressed="false">Toán</button>
+  </div>
+
+  <div class="quota" title="Lượt quét còn lại trong tháng này">
+    <span class="chip acc" id="planName">—</span>
+    <span>còn <b id="scansLeft" class="num">—</b><span class="muted">/<span
+      id="scansTotal">—</span> lượt quét</span></span>
+    <span class="meter"><i id="quotaBar" style="width:0%"></i></span>
+  </div>
+
+  <span class="avatar" id="who" aria-hidden="true">—</span>
+  <button class="btn btn-ghost btn-sm" type="button" id="btnLogout">Thoát</button>
+</header>
+
+<!-- ══════════════════════════════════════════════════ TRANG CHÍNH ═══ -->
+<!-- Vào app là thấy màn này chứ không phải cả kho đề đập vào mặt. -->
+<section class="screen on" id="s-home" aria-label="Trang chính">
+  <div class="homewrap">
+
+    <div class="hometop">
+      <div>
+        <h2 id="hiName">Chào cô</h2>
+        <p class="muted" id="hiSub" style="margin:4px 0 0;font-size:14px"></p>
+      </div>
+      <div class="grow"></div>
+      <button class="btn btn-primary" type="button" data-go="nguon">Nạp tài liệu mới</button>
+      <button class="btn" type="button" data-go="rap">Mở đề đang soạn</button>
+    </div>
+
+    <div class="tiles" id="homeTiles"></div>
+
+    <div class="homegrid">
+      <div class="homecard">
+        <div class="facet-h"><span class="cap">Bắt đầu từ đâu</span></div>
+        <ol class="steps3" id="homeSteps"></ol>
+      </div>
+
+      <div class="homecard">
+        <div class="facet-h"><span class="cap">Kho của bạn theo chuyên đề</span>
+          <div class="grow"></div>
+          <button class="btn btn-ghost btn-sm" type="button" data-go="kho">Mở kho</button></div>
+        <div id="homeTopics"></div>
+      </div>
+
+      <div class="homecard">
+        <div class="facet-h"><span class="cap">Tài liệu gần đây</span>
+          <div class="grow"></div>
+          <button class="btn btn-ghost btn-sm" type="button" data-go="nguon">Xem hết</button></div>
+        <div id="homeDocs"></div>
+      </div>
+
+      <div class="homecard">
+        <div class="facet-h"><span class="cap">Mẹo dùng nhanh</span></div>
+        <ul class="tips" id="homeTips"></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ KHO ═══ -->
+<section class="screen" id="s-kho" aria-label="Kho câu hỏi">
+
+  <aside class="facets" aria-label="Bộ lọc">
+    <div>
+      <div class="facet-h">
+        <button class="fold" type="button" data-facet="type" aria-expanded="true">▾</button>
+        <span class="cap">Dạng câu</span>
+        <span class="fbadge" data-fcount="type" hidden></span>
+        <button class="clr" type="button" data-clear="type" hidden>bỏ lọc</button></div>
+      <div class="flist" id="fType"></div>
+    </div>
+    <div>
+      <div class="facet-h">
+        <button class="fold" type="button" data-facet="diff" aria-expanded="true">▾</button>
+        <span class="cap">Độ khó</span>
+        <span class="fbadge" data-fcount="diff" hidden></span>
+        <button class="clr" type="button" data-clear="diff" hidden>bỏ lọc</button></div>
+      <div class="fgrid" id="fDiff"></div>
+    </div>
+    <div>
+      <div class="facet-h">
+        <button class="fold" type="button" data-facet="topic" aria-expanded="true">▾</button>
+        <span class="cap">Chuyên đề</span>
+        <span class="fbadge" data-fcount="topic" hidden></span>
+        <button class="clr" type="button" data-clear="topic" hidden>bỏ lọc</button></div>
+      <div class="flist" id="fTopic"></div>
+    </div>
+    <div>
+      <div class="facet-h">
+        <button class="fold" type="button" data-facet="src" aria-expanded="false">▸</button>
+        <span class="cap">Nguồn</span>
+        <span class="fbadge" data-fcount="src" hidden></span>
+        <button class="clr" type="button" data-clear="src" hidden>bỏ lọc</button></div>
+      <div class="flist" id="fSrc"></div>
+    </div>
+
+    <div style="margin-top:auto">
+      <div class="facet-h"><span class="cap">Sức chứa kho</span></div>
+      <div id="capacity"></div>
+    </div>
+  </aside>
+
+  <div class="col bordered">
+    <div class="bar">
+      <label class="searchbox">
+        <span class="sr-only">Tìm câu hỏi</span>
+        <svg width="15" height="15" viewBox="0 0 256 256" fill="none" stroke="#75798c"
+             stroke-width="18" aria-hidden="true">
+          <circle cx="112" cy="112" r="80"></circle><path d="M168 168l60 60"></path></svg>
+        <input type="search" id="q" placeholder="Tìm câu — gõ không dấu vẫn ra">
+      </label>
+      <span class="num" id="count" style="font-size:13.5px;color:var(--ink-3);white-space:nowrap"></span>
+      <button class="btn btn-sm" type="button" id="btnSort">Sắp xếp: mới nhất</button>
+      <button class="btn btn-sm btn-primary" type="button" id="btnAddSel">+ Thêm vào đề</button>
+    </div>
+    <div class="scroll" id="list"></div>
+  </div>
+
+  <aside class="detail" aria-label="Câu đang chọn">
+    <div class="bar">
+      <span class="cap">Câu đang chọn</span>
+      <div class="grow"></div>
+      <button class="btn btn-sm" type="button" id="btnEditSel">Sửa</button>
+      <button class="btn btn-sm btn-danger" type="button" id="btnDelSel">Xoá</button>
+    </div>
+    <div class="body" id="detail"></div>
+    <div class="bar top">
+      <button class="btn btn-primary btn-block" type="button" id="btnAddOne">
+        Thêm vào đề đang soạn</button>
+    </div>
+  </aside>
+</section>
+
+<!-- ════════════════════════════════════════════════════════ RÁP ĐỀ ═══ -->
+<section class="screen" id="s-rap" aria-label="Ráp đề">
+
+  <div class="col bordered">
+    <div class="bar norule">
+      <div class="barbtns">
+        <button class="btn btn-sm" type="button" id="btnBlueprint">Dựng theo ma trận</button>
+        <button class="btn btn-sm" type="button" id="btnResolve">Rút lại câu ngẫu nhiên</button>
+        <button class="btn btn-sm" type="button" id="btnShuffle">Trộn 4 mã đề</button>
+        <button class="btn btn-sm" type="button" id="btnLayout">Trình bày</button>
+        <button class="btn btn-sm" type="button" id="btnFoldAll" title="Thu gọn hoặc mở hết các phần">Thu gọn</button>
+        <button class="btn btn-sm" type="button" id="btnClear">Xoá hết</button>
+        <button class="btn btn-sm" type="button" id="btnExportJson" title="Cho ai muốn chạy tiếp bằng CLI phase0">JSON</button>
+        <button class="btn btn-sm" type="button" id="btnExportAll">Xuất cả bộ</button>
+        <button class="btn btn-sm btn-primary" type="button" id="btnExport">Xuất Word</button>
+      </div>
+    </div>
+    <div class="bar thin">
+      <span class="tally" id="tally"></span>
+      <span class="vline"></span>
+      <span id="mixline" style="font-size:12.5px;color:var(--ink-3)"></span>
+    </div>
+    <div class="scroll outline" id="canvas"></div>
+  </div>
+
+  <aside class="preview" aria-label="Bản xem trước">
+    <div class="bar">
+      <div class="seg" role="group" aria-label="Xem đề, đáp án, lời giải hay ma trận">
+        <button type="button" data-sheet="de" aria-pressed="true">Đề</button>
+        <button type="button" data-sheet="dapan" aria-pressed="false">Đáp án</button>
+        <button type="button" data-sheet="loigiai" aria-pressed="false">Lời giải</button>
+        <button type="button" data-sheet="matran" aria-pressed="false">Ma trận</button>
+      </div>
+      <div class="grow"></div>
+      <span class="muted" style="font-size:12.5px" id="pageEst">A4</span>
+      <button class="btn btn-sm btn-ghost" type="button" id="btnRefresh">Làm mới</button>
+    </div>
+    <div class="body" id="sheetwrap" style="position:relative">
+      <div class="sheet" id="sheet"></div>
+    </div>
+  </aside>
+</section>
+
+<!-- ═════════════════════════════════════════════════════════ DUYỆT ═══ -->
+<section class="screen" id="s-duyet" aria-label="Duyệt câu vừa trích xuất">
+
+  <div class="rv-bar">
+    <div id="rvDocs"></div>
+    <span class="vline"></span>
+    <div class="rvfilters" id="rvFilters" role="group" aria-label="Lọc hàng chờ"></div>
+    <div class="grow"></div>
+    <button class="btn btn-sm" type="button" id="btnDropDup" hidden>Bỏ câu trùng</button>
+    <button class="btn btn-sm" type="button" id="btnApproveAll">Duyệt hàng loạt</button>
+  </div>
+
+  <div class="rv-bar2">
+    <span class="num" style="font-size:13.5px" id="rvProgress"></span>
+    <span class="rvtrack"><i id="rvBar" style="width:0%"></i></span>
+    <span class="muted" style="font-size:12.5px;white-space:nowrap" id="rvDone"></span>
+    <div class="grow"></div>
+    <span class="keys">
+      <kbd>Enter</kbd> duyệt <kbd>E</kbd> sửa <kbd>S</kbd> để sau <kbd>X</kbd> bỏ <kbd>← →</kbd> chuyển
+    </span>
+  </div>
+
+  <div class="rv-grid" id="rvGrid">
+    <div class="scanpane">
+      <div class="bar" style="background:none">
+        <span class="cap">Ảnh gốc</span>
+        <div class="grow"></div>
+        <span class="muted" style="font-size:12.5px">bản dựng thay ảnh scan bằng chữ giả</span>
+      </div>
+      <div class="scanwrap"><div class="scan" id="rvScan"></div></div>
+    </div>
+
+    <div class="rvform">
+      <div class="bar" style="background:none;flex-wrap:wrap">
+        <span class="cap">AI đọc ra</span>
+        <span id="rvFlags" style="display:flex;gap:6px;flex-wrap:wrap"></span>
+        <div class="grow"></div>
+        <span class="muted" style="font-size:12.5px" id="rvModel"></span>
+      </div>
+      <div class="rvbody" id="rvBody"></div>
+      <div class="bar top">
+        <button class="btn btn-danger" type="button" id="rvDrop">Bỏ <kbd>X</kbd></button>
+        <button class="btn" type="button" id="rvLater">Để sau <kbd>S</kbd></button>
+        <div class="grow"></div>
+        <button class="btn" type="button" id="rvEdit">Sửa kĩ <kbd>E</kbd></button>
+        <button class="btn btn-primary" type="button" id="rvOk">Duyệt, sang câu sau <kbd>Enter</kbd></button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════════════════════════ THÊM TÀI LIỆU ═══ -->
+<section class="screen" id="s-nguon" aria-label="Thêm tài liệu">
+
+  <div class="upcol">
+    <div>
+      <h3 style="font-size:25px;margin-bottom:2px">Thêm tài liệu</h3>
+      <p class="muted" style="margin:0;font-size:13.5px">
+        Đặt nhãn đúng ngay từ đầu thì đỡ phải sửa 40 câu về sau.</p>
+    </div>
+
+    <div class="drop" id="drop" tabindex="0" role="button"
+         aria-label="Chọn hoặc kéo thả tài liệu để nạp">
+      <svg width="34" height="34" viewBox="0 0 256 256" fill="none" stroke="#796cbf"
+           stroke-width="14" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M128 168V72M92 108l36-36 36 36"></path>
+        <path d="M40 168v24a16 16 0 0 0 16 16h144a16 16 0 0 0 16-16v-24"></path></svg>
+      <b>Kéo file vào đây, hoặc bấm để chọn</b>
+      <span>PDF, ảnh chụp hoặc Word · tối đa 50 trang mỗi lần</span>
+    </div>
+
+    <div>
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px">
+        <h4 style="font-size:16px">Tài liệu đã nạp</h4>
+        <span class="muted" style="font-size:12.5px" id="srcSummary"></span>
+      </div>
+      <table class="table">
+        <caption class="sr-only">Danh sách tài liệu đã nạp</caption>
+        <thead><tr>
+          <th>Tài liệu</th><th class="r" style="width:70px">Trang</th>
+          <th class="r" style="width:64px">Câu</th><th class="r" style="width:76px">Lượt</th>
+          <th style="width:170px">Trạng thái</th><th style="width:96px"></th>
+        </tr></thead>
+        <tbody id="srcRows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <aside class="optcol" aria-label="Tuỳ chọn khi nạp">
+    <h4 style="font-size:16px">Áp cho lần nạp này</h4>
+
+    <div class="grid2">
+      <label><span class="lbl">Môn</span>
+        <select data-u="subject">
+          <option>Vật lí</option><option>Hoá học</option>
+          <option>Sinh học</option><option>Toán</option>
+        </select></label>
+      <label><span class="lbl">Lớp mặc định</span>
+        <select data-u="grade"><option>12</option><option>11</option><option>10</option></select></label>
+    </div>
+
+    <label>
+      <span class="lbl">Nguồn mặc định</span>
+      <input type="text" data-u="srcLabel" placeholder="ví dụ: Ninh Bình 2024">
+      <span class="hint">Bỏ trống thì AI tự đoán từ nội dung tài liệu.</span>
+    </label>
+
+    <div>
+      <span class="lbl">Mức đọc</span>
+      <div class="tierbox" id="tierBox" role="group" aria-label="Mức đọc"></div>
+    </div>
+
+    <label style="max-width:150px">
+      <span class="lbl">Số trang tài liệu</span>
+      <input type="number" min="1" max="50" value="8" data-u="pages">
+    </label>
+
+    <div class="estimate">
+      <span class="cap">Ước tính</span>
+      <div style="display:flex;align-items:baseline;gap:6px">
+        <b class="big" id="estPer">—</b>
+        <span style="font-size:13px;color:var(--ink-3)">mỗi trang</span>
+      </div>
+      <div class="rule" style="background:var(--fade-right)"></div>
+      <div class="rows" id="estRows"></div>
+      <div id="estNote" style="font-size:12.5px"></div>
+    </div>
+
+    <label class="checkrow">
+      <input type="checkbox" data-u="autoApprove" class="sr-only">
+      <span class="ck" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 16 16"
+        fill="none" stroke="#f3f5fe" stroke-width="2.4" stroke-linecap="round"
+        stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"></path></svg></span>
+      <span><b>Tự duyệt câu tin cậy cao</b>
+        <span>Bỏ qua bước duyệt tay với câu hai model đọc giống hệt nhau.</span></span>
+    </label>
+
+    <button class="btn btn-primary btn-block" type="button" id="btnStartUpload"
+            style="margin-top:auto">Bắt đầu nạp</button>
+  </aside>
+</section>
+
+<script type="module" src="./app.js"></script>
+</body>
+</html>

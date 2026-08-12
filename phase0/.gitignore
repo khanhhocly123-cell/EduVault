@@ -1,0 +1,8 @@
+node_modules/
+out/
+.env
+*.log
+
+# Dựng lại bằng `npm run reference`. Không commit file .docx nhị phân — nửa năm
+# sau không ai biết trong đó có gì, mà nội dung nó nằm hết trong src/reference.ts.
+templates/reference.docx

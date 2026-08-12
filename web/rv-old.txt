@@ -1,0 +1,268 @@
+let rvIdx = 0;
+
+/* Câu trùng cũng phải do người quyết. "Duyệt hết câu tin cậy cao" mà nuốt luôn
+   câu trùng thì kho đầy bản sao mà không ai biết. */
+const dupOf = (p) => BANK.find(x => fold(plain(x.stem)).trim() === fold(plain(p.stem)).trim());
+const isConfident = (p) => !p.conflicts.length && !dupOf(p);
+
+function paintPendCount(){
+  const el = $("#pendCount");
+  el.textContent = PENDING.length;
+  el.hidden = !PENDING.length;
+}
+
+function paintReview(){
+  paintPendCount();
+  const p = PENDING[rvIdx];
+
+  if(!p){
+    $("#rvNo").textContent = "0";
+    $("#rvTotal").textContent = "0";
+    $("#rvTicks").innerHTML = "";
+    $("#rvSrc").textContent = "";
+    $("#rvScan").innerHTML = `<div class="ln" style="opacity:1">Không còn trang nào chờ duyệt.</div>`;
+    $("#rvBody").innerHTML = `<div class="empty">
+      Duyệt xong hết rồi. Nạp thêm tài liệu ở màn <b>Tài liệu</b>.</div>`;
+    $("#rvFlagCount").hidden = true;
+    $("#rvModels").textContent = "";
+    ["rvDrop","rvEdit","rvOk","btnApproveAll"].forEach(id => { $("#"+id).disabled = true; });
+    return;
+  }
+  ["rvDrop","rvEdit","rvOk"].forEach(id => { $("#"+id).disabled = false; });
+  $("#btnApproveAll").disabled = !PENDING.some(isConfident);
+
+  $("#rvNo").textContent = rvIdx + 1;
+  $("#rvTotal").textContent = PENDING.length;
+  $("#rvSrc").textContent = `${p.src} · trang ${p.page}`;
+  $("#rvModels").textContent = p.models;
+  $("#rvTicks").innerHTML = PENDING.map((q,i) =>
+    `<i class="${i === rvIdx ? "now" : isConfident(q) ? "" : "flag"}"></i>`).join("");
+
+  const flags = p.conflicts.length;
+  $("#rvFlagCount").hidden = !flags;
+  $("#rvFlagCount").textContent = `${flags} chỗ hai model đọc khác nhau`;
+
+  // ảnh gốc: cả trang, câu đang duyệt được khoanh
+  $("#rvScan").innerHTML = PENDING.map((q,i) => {
+    const lines = q.raw.map((t,k) =>
+      `<div class="ln${k ? " opt" : ""}"${i === rvIdx ? ' style="opacity:1"' : ""}>${esc(t)}</div>`).join("");
+    return i === rvIdx
+      ? `<div class="here"><span class="tagtop">Câu đang duyệt</span>${lines}</div>`
+      : lines;
+  }).join("");
+
+  // đề bài, tô vàng chỗ lệch
+  let stemHtml = tex(p.stem);
+  if(p.mark){
+    const m = tex(`$${p.mark}$`);
+    stemHtml = stemHtml.replace(m, `<span class="mark">${m}</span>`);
+  }
+
+  let h = `<div style="display:flex;flex-direction:column;gap:6px">
+      <div class="lbl" style="margin:0">Đề bài</div>
+      <div class="block">${stemHtml}</div>
+      ${p.conflicts.filter(c => c.field === "stem").map((c,i) => `
+        <div class="conflict">
+          <svg width="16" height="16" viewBox="0 0 256 256" fill="none" stroke="#6b5426"
+               stroke-width="16" aria-hidden="true" style="flex:none">
+            <circle cx="128" cy="128" r="96"></circle><path d="M128 76v60M128 172h.1"></path></svg>
+          <span class="t">Luna đọc <b>${esc(c.mine)}</b>, Opus đọc <b>${esc(c.other)}</b>.
+            ${esc(c.note)}</span>
+          <div class="grow"></div>
+          <button class="btn btn-sm" type="button" data-fix="${i}.take"
+                  style="border-color:var(--warn-line)">Lấy ${esc(c.other)}</button>
+          <button class="btn btn-sm btn-primary" type="button" data-fix="${i}.keep">Giữ ${esc(c.mine)}</button>
+        </div>`).join("")}
+    </div>`;
+
+  /* Câu có hình: model không cắt được ảnh ra, chỉ tả lại. Nói thẳng để giáo
+     viên biết là phải tự gắn hình, chứ không ngồi chờ ảnh tự hiện. */
+  if(p.figNote){
+    h += `<div class="conflict" style="background:var(--acc-tint);box-shadow:inset 0 0 0 1px var(--acc)">
+      <svg width="16" height="16" viewBox="0 0 256 256" fill="none" stroke="#5d5294"
+           stroke-width="16" aria-hidden="true" style="flex:none">
+        <rect x="32" y="48" width="192" height="160" rx="12"></rect>
+        <path d="M32 168l52-52 44 44 28-28 40 40"></path></svg>
+      <span class="t" style="color:var(--acc-ink)"><b>Câu này có hình</b> —
+        “${esc(p.figNote)}”. Duyệt xong vào phần Sửa để gắn ảnh, chỉnh cỡ và chọn chỗ đặt.</span>
+    </div>`;
+  }
+
+  if(p.type === "MC" && p.ch){
+    h += `<div style="display:flex;flex-direction:column;gap:6px">
+      <div class="lbl" style="margin:0">Bốn phương án${
+        p.answerSource === "solved"
+          ? ' <span style="color:var(--warn)">· AI tự giải, đề gốc không in đáp án</span>'
+          : p.answerSource === "printed" ? ' <span style="color:var(--ok)">· chép từ đáp án in trong đề</span>' : ""
+      }</div>
+      <div class="choices">${p.ch.map((c,i) =>
+        `<div class="choice${i===p.ans?" ans":""}"><b>${LETTER[i]}.</b> ${tex(c)}
+         ${i===p.ans?'<span class="tagright">đáp án</span>':""}</div>`).join("")}</div>
+    </div>`;
+  }
+
+  const topicConflict = p.conflicts.find(c => c.field === "topic");
+  h += `<div class="grid3">
+      <label><span class="lbl">Dạng câu</span><select data-p="type">${
+        Object.entries(TYPES).map(([k,v])=>
+          `<option value="${k}" ${k===p.type?"selected":""}>${v}</option>`).join("")
+      }</select></label>
+      <label><span class="lbl">Độ khó</span><select data-p="diff">${
+        DIFFS.map(d=>`<option value="${d}" ${d===p.diff?"selected":""}>${d} — ${DNAME[d]}</option>`).join("")
+      }</select></label>
+      <label><span class="lbl">Lớp</span><select data-p="grade">${
+        [10,11,12].map(g=>`<option value="${g}" ${g===p.grade?"selected":""}>Lớp ${g}</option>`).join("")
+      }</select></label>
+    </div>
+
+    <div class="grid2">
+      <label><span class="lbl">Chuyên đề${
+        topicConflict ? ' <span style="color:var(--warn)">· hai model gán khác nhau</span>' : ""}</span>
+        <select data-p="topic" ${topicConflict ? 'style="border-color:var(--warn-line)"' : ""}>${
+          topicsOf("physics").concat(topicsOf("math")).map(([k,v])=>
+            `<option value="${k}" ${k===p.topic?"selected":""}>${v}</option>`).join("")
+        }</select>
+        ${topicConflict
+          ? `<span class="hint">Opus gán “${esc(TOPICS[topicConflict.other] ?? topicConflict.other)}”.</span>`
+          : ""}</label>
+      <label><span class="lbl">Nguồn</span>
+        <input type="text" data-p="src" value="${esc(p.srcLabel ?? p.src.replace(/\.[a-z]+$/,""))}"></label>
+    </div>`;
+
+  const dup = dupOf(p);
+  h += dup
+    ? `<div class="conflict"><span class="t"><b>Câu này đã có trong kho</b> —
+        nguồn “${esc(dup.src)}”. Duyệt tiếp là kho có hai bản giống nhau;
+        “Duyệt hết câu tin cậy cao” sẽ bỏ qua câu này.</span></div>`
+    : `<div class="goodrow">
+        <svg width="16" height="16" viewBox="0 0 256 256" fill="none" stroke="#2c6b4b"
+             stroke-width="16" aria-hidden="true" style="flex:none">
+          <path d="M40 128l56 56 120-120"></path></svg>
+        Không tìm thấy câu này trong kho — không phải câu trùng.</div>`;
+
+  $("#rvBody").innerHTML = h;
+
+  $$("[data-p]", $("#rvBody")).forEach(el => el.addEventListener("change", e => {
+    const k = e.target.dataset.p;
+    p[k === "grade" ? "grade" : k] = k === "grade" ? +e.target.value : e.target.value;
+    if(k === "src") p.srcLabel = e.target.value;
+    if(k === "topic") p.conflicts = p.conflicts.filter(c => c.field !== "topic");
+    paintReview();
+  }));
+
+  /* Hai nút chỉ khác nhau ở chỗ có ghi đè nội dung hay không — cả hai đều gỡ
+     chỗ lệch ra khỏi danh sách, vì người đã nhìn ảnh gốc và quyết rồi. */
+  $$("[data-fix]", $("#rvBody")).forEach(b => b.addEventListener("click", () => {
+    const [i, how] = b.dataset.fix.split(".");
+    const c = p.conflicts.filter(x => x.field === "stem")[+i];
+    if(!c) return;
+    if(how === "take") Object.assign(p, c.apply);
+    p.mark = null;
+    p.conflicts = p.conflicts.filter(x => x !== c);
+    paintReview();
+    toast(how === "take" ? `Đã lấy bản của Opus: ${c.other}` : `Giữ bản của Luna: ${c.mine}`);
+  }));
+}
+
+/* Đưa một câu đã duyệt vào kho. Nguồn ghi rõ là AI đoán để còn lọc lại sau.
+   Trả về null nếu kho đã đầy trần của gói — người gọi phải xử lý, không được
+   nuốt im lặng rồi để giáo viên tưởng câu đã vào. */
+function approve(p){
+  if(capacityLeft(p.type) <= 0){
+    toast(`Kho đã đủ ${plan.cap[p.type]} câu ${TYPES[p.type].toLowerCase()} của gói ${plan.name}. ` +
+          `Xoá bớt câu cũ hoặc nâng gói.`);
+    return null;
+  }
+  const q = {
+    id: "q" + Date.now().toString(36) + Math.floor(Math.random()*1e3).toString(36),
+    type:p.type, diff:p.diff, topic:p.topic, grade:p.grade,
+    subject: p.topic.startsWith("m") ? "math" : "physics",
+    src: p.srcLabel ?? p.src.replace(/\.[a-z]+$/,""), ai:true,
+    stem:p.stem, sol:p.sol || "",
+    // Model chỉ khoanh được chỗ hình trên trang gốc và tả nó bằng chữ. Ảnh thật
+    // thì giáo viên gắn sau — giữ mô tả lại để họ biết cần hình gì.
+    fig:null, figNote:p.figNote ?? null,
+    answerSource:p.answerSource ?? "solved"
+  };
+  if(p.type === "MC"){ q.ch = p.ch; q.ans = p.ans; }
+  if(p.type === "TF") q.tf = p.tf ?? TFIDX.map(()=>["",true]);
+  if(p.type === "SHORT") q.sa = p.sa ?? { value:"", unit:"", tol:"0" };
+  BANK.push(q);
+  return q;
+}
+
+function dropPending(i){
+  PENDING.splice(i,1);
+  if(rvIdx >= PENDING.length) rvIdx = Math.max(0, PENDING.length - 1);
+  syncReviewSource();
+  paintFacets(); paintKho(); paintReview(); paintSources();
+}
+
+/* Dòng tài liệu bên màn Tài liệu phải đi theo: duyệt hết thì nó thành "đã vào kho". */
+function syncReviewSource(){
+  const row = SOURCES.find(r => r.state === "review");
+  if(!row) return;
+  const left = PENDING.filter(p => p.src === row.name).length;
+  if(left) row.label = `Chờ duyệt ${left} câu`;
+  else { row.state = "done"; row.label = "Đã vào kho"; }
+}
+
+$("#rvOk").addEventListener("click", () => {
+  const p = PENDING[rvIdx];
+  if(!p) return;
+  if(p.conflicts.length){
+    toast("Còn chỗ hai model đọc khác nhau — chọn một bản trước đã"); return;
+  }
+  if(!approve(p)) return;          // kho đầy — approve() đã báo, giữ câu lại
+  dropPending(rvIdx);
+  toast("Đã vào kho");
+});
+
+$("#rvDrop").addEventListener("click", () => {
+  if(!PENDING[rvIdx]) return;
+  dropPending(rvIdx);
+  toast("Đã bỏ câu này, không vào kho");
+});
+
+$("#rvEdit").addEventListener("click", () => {
+  const p = PENDING[rvIdx];
+  if(!p) return;
+  const q = approve(p);
+  if(!q) return;
+  dropPending(rvIdx);
+  toast("Đã vào kho — mở ra sửa kĩ");
+  openEditor(q.id);
+});
+
+$("#btnApproveAll").addEventListener("click", () => {
+  const ok = PENDING.filter(isConfident);
+  if(!ok.length){ toast("Câu nào cũng còn chỗ cần mắt người"); return; }
+  /* Phải chốt danh sách TRƯỚC khi duyệt rồi mới gỡ theo đúng đối tượng đó.
+     Lọc lại bằng isConfident sau khi duyệt thì hỏng: câu vừa vào kho khiến
+     chính nó thành "câu trùng", nên không câu nào bị gỡ khỏi hàng chờ. */
+  // Chỉ gỡ khỏi hàng chờ những câu THẬT SỰ vào được kho — câu bị trần gói
+  // chặn thì phải nằm lại, không thì nó bốc hơi mà giáo viên tưởng đã lưu.
+  const vao = ok.filter(p => approve(p));
+  for(const p of vao){
+    const i = PENDING.indexOf(p);
+    if(i >= 0) PENDING.splice(i,1);
+  }
+  rvIdx = 0;
+  syncReviewSource();
+  paintFacets(); paintKho(); paintReview(); paintSources();
+  toast(vao.length === ok.length
+    ? `Đã duyệt ${vao.length} câu tin cậy cao`
+    : `Đã duyệt ${vao.length}/${ok.length} câu — số còn lại vướng trần gói ${plan.name}`);
+});
+
+document.addEventListener("keydown", e => {
+  if(!$("#s-duyet").classList.contains("on")) return;
+  if(document.querySelector(".scrim")) return;
+  if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+  if(e.key === "Enter"){ e.preventDefault(); $("#rvOk").click(); }
+  else if(e.key === "e" || e.key === "E"){ $("#rvEdit").click(); }
+  else if(e.key === "x" || e.key === "X"){ $("#rvDrop").click(); }
+  else if(e.key === "ArrowRight"){ rvIdx = Math.min(PENDING.length-1, rvIdx+1); paintReview(); }
+  else if(e.key === "ArrowLeft"){ rvIdx = Math.max(0, rvIdx-1); paintReview(); }
+});
+

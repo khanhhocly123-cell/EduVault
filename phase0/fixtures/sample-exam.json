@@ -1,0 +1,85 @@
+{
+  "header": {
+    "org": "Sở GD&ĐT Thành phố Hà Nội",
+    "school": "Trường THPT Nguyễn Trãi",
+    "title": "Đề kiểm tra giữa học kì I",
+    "subject": "Vật lí — Lớp 12",
+    "durationMin": 50,
+    "code": "101"
+  },
+  "questions": [
+    {
+      "type": "MC",
+      "stem_latex": "Một con lắc lò xo gồm vật nhỏ khối lượng $m = 100\\,\\mathrm{g}$ gắn với lò xo nhẹ có độ cứng $k = 40\\,\\mathrm{N/m}$, dao động điều hoà theo phương ngang. Tần số góc của dao động bằng",
+      "images": [],
+      "mc_choices": [
+        { "label": "A", "text_latex": "$20\\,\\mathrm{rad/s}$" },
+        { "label": "B", "text_latex": "$200\\,\\mathrm{rad/s}$" },
+        { "label": "C", "text_latex": "$4\\,\\mathrm{rad/s}$" },
+        { "label": "D", "text_latex": "$400\\,\\mathrm{rad/s}$" }
+      ],
+      "mc_correct": "A",
+      "tf_statements": null,
+      "short_answer": null,
+      "solution_latex": "Tần số góc $\\omega = \\sqrt{\\dfrac{k}{m}} = \\sqrt{\\dfrac{40}{0{,}1}} = \\sqrt{400} = 20\\,\\mathrm{rad/s}$.",
+      "grade": 11,
+      "topic_code": "p11.oscillation",
+      "difficulty": "TH",
+      "notes": null
+    },
+    {
+      "type": "MC",
+      "stem_latex": "Một vật nhỏ khối lượng $m = 2\\,\\mathrm{kg}$ trượt không ma sát xuống một mặt phẳng nghiêng hợp với phương ngang góc $\\alpha = 30^\\circ$ như hình vẽ.\n\n[[IMG:1]]\n\nLấy $g = 10\\,\\mathrm{m/s^2}$. Gia tốc của vật có độ lớn bằng",
+      "images": [
+        { "slot": 1, "bbox": [0.12, 0.34, 0.48, 0.61], "caption": "vật trên mặt phẳng nghiêng" }
+      ],
+      "mc_choices": [
+        { "label": "A", "text_latex": "$5\\,\\mathrm{m/s^2}$" },
+        { "label": "B", "text_latex": "$8{,}66\\,\\mathrm{m/s^2}$" },
+        { "label": "C", "text_latex": "$10\\,\\mathrm{m/s^2}$" },
+        { "label": "D", "text_latex": "$2{,}5\\,\\mathrm{m/s^2}$" }
+      ],
+      "mc_correct": "A",
+      "tf_statements": null,
+      "short_answer": null,
+      "solution_latex": "Chiếu định luật II Newton lên phương mặt nghiêng, thành phần trọng lực gây ra gia tốc là $P\\sin\\alpha$, do đó $a = g\\sin\\alpha = 10 \\cdot \\sin 30^\\circ = 5\\,\\mathrm{m/s^2}$. Gia tốc không phụ thuộc khối lượng.",
+      "grade": 10,
+      "topic_code": "p10.dynamics",
+      "difficulty": "TH",
+      "notes": null
+    },
+    {
+      "type": "TF",
+      "stem_latex": "Một lượng khí lí tưởng xác định thực hiện quá trình đẳng áp, nhiệt độ tuyệt đối tăng từ $T_1 = 300\\,\\mathrm{K}$ lên $T_2 = 600\\,\\mathrm{K}$.",
+      "images": [],
+      "mc_choices": null,
+      "mc_correct": null,
+      "tf_statements": [
+        { "idx": "a", "text_latex": "Thể tích của khối khí tăng gấp đôi.", "is_true": true },
+        { "idx": "b", "text_latex": "Áp suất của khối khí giảm đi một nửa.", "is_true": false },
+        { "idx": "c", "text_latex": "Khối khí nhận nhiệt lượng từ bên ngoài.", "is_true": true },
+        { "idx": "d", "text_latex": "Nội năng của khối khí không đổi.", "is_true": false }
+      ],
+      "short_answer": null,
+      "solution_latex": "a) Đúng: quá trình đẳng áp có $\\dfrac{V}{T}$ không đổi nên $V_2 = V_1 \\dfrac{T_2}{T_1} = 2V_1$.\n\nb) Sai: đẳng áp nghĩa là áp suất giữ nguyên.\n\nc) Đúng: nhiệt độ tăng nên nội năng tăng, đồng thời khí dãn nở nên sinh công. Theo nguyên lí I, $Q = \\Delta U + A' > 0$.\n\nd) Sai: nội năng khí lí tưởng chỉ phụ thuộc nhiệt độ, mà nhiệt độ đã tăng.",
+      "grade": 12,
+      "topic_code": "p12.gas",
+      "difficulty": "VD",
+      "notes": null
+    },
+    {
+      "type": "SHORT",
+      "stem_latex": "Một vật dao động điều hoà với biên độ $A = 5\\,\\mathrm{cm}$ và tần số $f = 2\\,\\mathrm{Hz}$. Lấy $\\pi \\approx 3{,}14$. Tốc độ cực đại của vật bằng bao nhiêu $\\mathrm{cm/s}$?",
+      "images": [],
+      "mc_choices": null,
+      "mc_correct": null,
+      "tf_statements": null,
+      "short_answer": { "value": 62.8, "unit": "cm/s", "tolerance": 0.2 },
+      "solution_latex": "Tốc độ cực đại $v_{\\max} = \\omega A = 2\\pi f A = 2 \\cdot 3{,}14 \\cdot 2 \\cdot 5 = 62{,}8\\,\\mathrm{cm/s}$.",
+      "grade": 11,
+      "topic_code": "p11.oscillation",
+      "difficulty": "TH",
+      "notes": null
+    }
+  ]
+}
