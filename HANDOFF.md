@@ -1,15 +1,15 @@
 # Bàn giao — EduVault
 
-## 0. Phase 1 pilot đã chạy thật (12/08/2026)
+## 0. Phase 1 tích hợp trực tiếp vào app hiện tại (13/08/2026)
 
-`phase1/` là app Next.js mới dành cho gia sư cá nhân và thay thế prototype `web/` trong các lần
-phát triển tiếp theo. Đã có auth/session thật, kho SQLite riêng theo user, upload thật, OCR Gemini
-qua pipeline `phase0`, review/bulk approve, tìm-lọc ngân hàng và xuất 3 loại DOCX có kill test
-equation native. Xem phạm vi và backlog chính xác tại `phase1/README.md`.
+`web/` vẫn là app chính, chạy tại `http://localhost:5173/index.html`; Phase 1 được nâng cấp ngay
+trên UI/engine ráp đề cũ, không có app song song. Đã có auth/session HttpOnly, workspace SQLite
+riêng theo user, file storage, upload thật, OCR Gemini qua `phase0`, autosave, review/bulk approve,
+tìm-lọc ngân hàng và DOCX equation-native. Xem phạm vi/backlog tại `web/README.md`.
 
 Quyết định pilot: chưa chuyển Supabase/job queue/billing để không dựng hạ tầng trước khi có hành vi
 người dùng. SQLite/filesystem phù hợp chạy local hoặc một VPS; không được hiểu là kiến trúc scale.
-`web/` được giữ làm tài liệu/reference UI, không còn là app chính.
+Không deploy nhiều instance với SQLite/snapshot hiện tại; pilot phù hợp local hoặc một VPS.
 
 Đọc file này là đủ để tiếp tục, không cần lịch sử hội thoại cũ.
 Cập nhật lần cuối: 12/08/2026 — **bỏ đối chiếu chéo + màn Duyệt chịu được
@@ -19,9 +19,8 @@ hàng trăm câu (mục 15)**. Trước đó: giao diện mới (mục 10), **mo
 
 > **Tên**: dự án đổi từ *Đề Studio* sang **EduVault** ngày 12/08/2026.
 > Bản thiết kế giao diện đề xuất tên tiếng Việt "Ngân Đề"; người dùng chốt
-> EduVault. Khoá phiên trong localStorage đổi theo: `eduvault.session`
-> (khoá cũ `de-studio.session` không còn đọc nữa — ai đang mở app sẽ bị
-> đá về màn đăng nhập một lần, đăng nhập lại là xong).
+> EduVault. Session prototype trong localStorage đã bỏ; app hiện dùng cookie HttpOnly
+> `eduvault_session` do server cấp.
 
 ---
 

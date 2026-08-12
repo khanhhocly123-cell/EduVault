@@ -236,7 +236,7 @@
       <div class="bar" style="background:none">
         <span class="cap">Ảnh gốc</span>
         <div class="grow"></div>
-        <span class="muted" style="font-size:12.5px">bản dựng thay ảnh scan bằng chữ giả</span>
+        <span class="muted" style="font-size:12.5px">file thật đã lưu riêng trong workspace</span>
       </div>
       <div class="scanwrap"><div class="scan" id="rvScan"></div></div>
     </div>
@@ -277,7 +277,8 @@
         <path d="M128 168V72M92 108l36-36 36 36"></path>
         <path d="M40 168v24a16 16 0 0 0 16 16h144a16 16 0 0 0 16-16v-24"></path></svg>
       <b>Kéo file vào đây, hoặc bấm để chọn</b>
-      <span>PDF, ảnh chụp hoặc Word · tối đa 50 trang mỗi lần</span>
+      <span>PDF hoặc ảnh chụp · tối đa 15 MB</span>
+      <input id="sourceFile" type="file" accept="application/pdf,image/png,image/jpeg,image/webp" hidden>
     </div>
 
     <div>
@@ -338,12 +339,12 @@
     </div>
 
     <label class="checkrow">
-      <input type="checkbox" data-u="autoApprove" class="sr-only">
+      <input type="checkbox" data-u="autoApprove" class="sr-only" disabled>
       <span class="ck" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 16 16"
         fill="none" stroke="#f3f5fe" stroke-width="2.4" stroke-linecap="round"
         stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 5"></path></svg></span>
-      <span><b>Tự duyệt câu tin cậy cao</b>
-        <span>Bỏ qua bước duyệt tay với câu hai model đọc giống hệt nhau.</span></span>
+      <span><b>Mọi câu đều vào hàng chờ duyệt</b>
+        <span>Pilot không tự đưa câu AI vào kho khi chưa qua mắt bạn.</span></span>
     </label>
 
     <button class="btn btn-primary btn-block" type="button" id="btnStartUpload"

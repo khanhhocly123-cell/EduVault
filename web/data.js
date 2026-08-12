@@ -113,7 +113,7 @@ export const PLANS = {
   },
   plus: {
     id:"plus", name:"Plus", price:99000, priceYear:79000,
-    who:"Giáo viên đứng lớp, ra đề đều mỗi kì.",
+    who:"Gia sư dạy đều nhiều lớp, ra đề mỗi tuần.",
     scans:400,
     cap:{ MC:2000, TF:800, SHORT:800, ESSAY:400 },
     tiers:["nhanh","chuan"],
@@ -129,7 +129,7 @@ export const PLANS = {
   },
   pro: {
     id:"pro", name:"Pro", price:199000, priceYear:159000,
-    who:"Tổ trưởng bộ môn, trung tâm luyện thi.",
+    who:"Nhóm gia sư hoặc trung tâm luyện thi nhỏ.",
     scans:1500,
     cap:{ MC:null, TF:null, SHORT:null, ESSAY:null },
     tiers:["nhanh","chuan","ki"],

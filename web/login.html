@@ -112,7 +112,7 @@
 
   <section class="hero">
     <div>
-      <span class="cap" style="color:var(--acc-ink)">Cho giáo viên phổ thông Việt Nam</span>
+      <span class="cap" style="color:var(--acc-ink)">Cho gia sư Toán — Lý độc lập</span>
       <h1>Ảnh chụp trang đề vào. File Word ra.</h1>
       <p class="lead">Công thức mở lên trong Word là sửa được ngay, không phải ảnh.
         Câu hỏi vào kho riêng của bạn, gắn sẵn chuyên đề và độ khó.
@@ -159,7 +159,7 @@
 
       <div class="steps">
         <div><i>01</i><p><b>Không gõ lại công thức nữa.</b>
-          Hai model đọc chéo nhau, chỗ nào lệch mới cần mắt người.</p></div>
+          AI nhập liệu, đánh dấu chỗ không chắc; bạn là người duyệt trước khi câu vào kho.</p></div>
         <div><i>02</i><p><b>Tìm lại được câu đã dùng.</b>
           Mỗi câu gắn nguồn, chuyên đề, độ khó và số đề đã dùng.</p></div>
         <div><i>03</i><p><b>Bốn file từ một đề.</b>
@@ -172,23 +172,25 @@
     <div>
       <h2 style="font-size:25px;margin-bottom:12px">Vào kho đề của bạn</h2>
       <p style="margin:0;font-size:14px;color:var(--ink-3);max-width:56ch;line-height:1.7">
-        Bản dựng thử này chạy tại máy, chưa nối máy chủ thật — gõ email nào cũng vào được.
-        Dữ liệu nằm trong <code>web/data.js</code>, tải lại trang là trở về như cũ.</p>
+        Đây là bản pilot chạy dữ liệu thật: tài khoản, tài liệu và kho câu hỏi được lưu riêng
+        trên máy chủ local của EduVault.</p>
     </div>
 
     <div class="authcard">
       <div>
-        <h2>Đăng nhập</h2>
+        <h2 id="authTitle">Đăng nhập</h2>
         <p style="margin:2px 0 0;font-size:13px;color:var(--ink-4)">Kho đề của bạn đang chờ.</p>
       </div>
       <div class="err" id="err" hidden></div>
       <form id="loginForm" novalidate style="display:flex;flex-direction:column;gap:14px">
+        <label id="nameRow" hidden><span class="lbl">Tên hiển thị</span>
+          <input id="nm" type="text" placeholder="Gia sư Minh" autocomplete="name"></label>
         <label><span class="lbl">Email</span>
           <input id="em" type="email" placeholder="ten@truong.edu.vn"
-                 autocomplete="username" value="colan@thpt-nguyentrai.edu.vn"></label>
+                 autocomplete="username"></label>
         <label><span class="lbl">Mật khẩu</span>
           <input id="pw" type="password" placeholder="••••••••"
-                 autocomplete="current-password" value="demo"></label>
+                 autocomplete="current-password" minlength="8"></label>
         <div class="rowbtw">
           <label class="checkrow" style="background:none;padding:0;gap:8px;align-items:center">
             <input type="checkbox" checked class="sr-only">
@@ -201,15 +203,9 @@
         </div>
         <button class="btn btn-primary btn-block" type="submit" id="btnLogin">Vào kho đề</button>
         <div class="or">hoặc</div>
-        <button class="btn btn-block" type="button" id="btnGoogle">
-          <svg width="16" height="16" viewBox="0 0 18 18" aria-hidden="true">
-            <path fill="#4285F4" d="M17.6 9.2c0-.6-.1-1.2-.2-1.8H9v3.5h4.8a4.1 4.1 0 0 1-1.8 2.7v2.2h2.9c1.7-1.6 2.7-3.9 2.7-6.6z"/>
-            <path fill="#34A853" d="M9 18c2.4 0 4.5-.8 6-2.2l-2.9-2.2c-.8.5-1.8.9-3.1.9-2.4 0-4.4-1.6-5.1-3.8H.9v2.3A9 9 0 0 0 9 18z"/>
-            <path fill="#FBBC05" d="M3.9 10.7a5.4 5.4 0 0 1 0-3.4V5H.9a9 9 0 0 0 0 8l3-2.3z"/>
-            <path fill="#EA4335" d="M9 3.6c1.3 0 2.5.5 3.4 1.3l2.6-2.6A9 9 0 0 0 .9 5l3 2.3C4.6 5.2 6.6 3.6 9 3.6z"/>
-          </svg>Tiếp tục với Google</button>
+        <button class="btn btn-block" type="button" id="btnAuthMode">Tạo tài khoản mới</button>
         <p style="margin:0;text-align:center;font-size:13px;color:var(--ink-4)">
-          Chưa có tài khoản? <a href="#gia" style="color:var(--acc-ink)">Dùng thử gói Lite miễn phí</a></p>
+          Pilot local · chưa bật Google OAuth và thanh toán.</p>
       </form>
     </div>
   </section>
@@ -232,7 +228,7 @@
   </section>
 
   <div class="foot">
-    <span>EduVault · dành cho giáo viên phổ thông Việt Nam</span>
+    <span>EduVault · dành cho gia sư có kho đề riêng</span>
     <span>Kho đề của bạn là riêng tư. Không chia sẻ, không công khai.</span>
   </div>
 </div>
@@ -242,7 +238,6 @@
    giữ bản chép tay riêng, sửa gói ở app là hai bên lệch nhau ngay. */
 import { PLANS, TYPES, OCR_TIERS, UNIT } from "./data.js";
 
-const SESSION_KEY = "eduvault.session";
 const $ = (s) => document.querySelector(s);
 const CTA = { lite:"Bắt đầu miễn phí", plus:"Dùng thử 14 ngày", pro:"Liên hệ" };
 
@@ -266,7 +261,7 @@ const TIERS = Object.values(PLANS).map(p => ({
   feats:[...p.perks.map(f => [1,f]), ...p.off.map(f => [0,f])]
 }));
 
-let cycle = "thang";
+let cycle = "thang", authMode = "login", selectedPlan = "lite";
 const money = (n) => n === 0 ? "0đ" : n.toLocaleString("vi-VN") + "đ";
 const TICK = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#2c6b4b" '+
   'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+
@@ -293,21 +288,52 @@ function paint(){
   }).join("");
 }
 
-function enter(plan){
+function setAuthMode(mode){
+  authMode = mode;
+  const creating = mode === "register";
+  $("#nameRow").hidden = !creating;
+  $("#authTitle").textContent = creating ? "Tạo tài khoản" : "Đăng nhập";
+  $("#btnLogin").textContent = creating ? "Tạo kho câu hỏi" : "Vào kho đề";
+  $("#btnAuthMode").textContent = creating ? "Đã có tài khoản? Đăng nhập" : "Tạo tài khoản mới";
+  $("#pw").autocomplete = creating ? "new-password" : "current-password";
+  $("#err").hidden = true;
+}
+
+async function enter(plan){
   const email = ($("#em").value || "").trim();
+  const password = $("#pw").value || "";
+  const name = ($("#nm").value || "").trim();
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
-    $("#err").textContent = "Email chưa đúng dạng — kiểm tra lại giúp tao.";
+    $("#err").textContent = "Email chưa đúng dạng — kiểm tra lại giúp mình.";
     $("#err").hidden = false;
     $("#em").focus();
     return;
   }
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ email, plan: plan || "plus", at: Date.now() }));
-  location.replace("./index.html");
+  if(password.length < 8){
+    $("#err").textContent = "Mật khẩu cần ít nhất 8 ký tự."; $("#err").hidden = false; return;
+  }
+  if(authMode === "register" && name.length < 2){
+    $("#err").textContent = "Nhập tên hiển thị của bạn."; $("#err").hidden = false; return;
+  }
+  const button = $("#btnLogin");
+  button.disabled = true; button.textContent = "Đang xử lý…"; $("#err").hidden = true;
+  try {
+    const response = await fetch(`/api/auth/${authMode}`, {
+      method:"POST", headers:{ "content-type":"application/json" },
+      body:JSON.stringify({ email, password, name, plan:plan || selectedPlan })
+    });
+    const result = await response.json();
+    if(!response.ok) throw new Error(result.error || "Không thể đăng nhập");
+    location.replace("./index.html");
+  } catch(err){
+    $("#err").textContent = err.message; $("#err").hidden = false;
+    button.disabled = false; button.textContent = authMode === "register" ? "Tạo kho câu hỏi" : "Vào kho đề";
+  }
 }
 
 document.addEventListener("click", (e) => {
   const p = e.target.closest("[data-pick]");
-  if(p){ enter(p.dataset.pick); return; }
+  if(p){ selectedPlan = p.dataset.pick; setAuthMode("register"); document.querySelector(".authwrap").scrollIntoView({behavior:"smooth"}); return; }
   const c = e.target.closest("[data-cycle]");
   if(c){
     cycle = c.dataset.cycle;
@@ -317,8 +343,10 @@ document.addEventListener("click", (e) => {
   }
 });
 
-$("#loginForm").addEventListener("submit", (e) => { e.preventDefault(); enter("plus"); });
-$("#btnGoogle").addEventListener("click", () => enter("plus"));
+$("#loginForm").addEventListener("submit", (e) => { e.preventDefault(); void enter(selectedPlan); });
+$("#btnAuthMode").addEventListener("click", () => setAuthMode(authMode === "login" ? "register" : "login"));
+
+fetch("/api/session", { cache:"no-store" }).then(r => { if(r.ok) location.replace("./index.html"); });
 
 paint();
 </script>

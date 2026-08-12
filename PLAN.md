@@ -1,10 +1,9 @@
 # EduVault — Plan kỹ thuật v0.1
 
-> **Cập nhật Phase 1 — 12/08/2026:** sản phẩm đã đổi ICP ban đầu từ “giáo viên/trường” sang
-> **gia sư cá nhân có kho đề riêng**. Bản pilot chạy thật nằm tại `phase1/`; dùng Next.js 16,
-> SQLite + filesystem, cookie auth và pipeline Gemini hiện có. Supabase/Inngest/billing được hoãn
-> đến khi 3–5 gia sư hoàn thành ít nhất hai vòng `upload → duyệt → xuất Word`.
-> Danh sách đã làm/chưa làm và cách chạy: `phase1/README.md`.
+> **Cập nhật Phase 1 — 13/08/2026:** ICP ban đầu đổi từ “giáo viên/trường” sang
+> **gia sư cá nhân có kho đề riêng**. Phase 1 được tích hợp thẳng vào app hiện tại ở `web/`,
+> giữ nguyên UI/engine ráp đề; không dựng app song song. Pilot dùng SQLite + filesystem,
+> cookie HttpOnly và pipeline Gemini trong `phase0`. Xem cách chạy và backlog tại `web/README.md`.
 
 App soạn đề & quản lý kho đề cá nhân cho giáo viên phổ thông Việt Nam.
 Môn khởi điểm: **Vật lý**. Stack: **Next.js + Supabase**.
@@ -251,6 +250,22 @@ Auth + RLS → upload PDF/ảnh → job trích xuất → **màn hình duyệt**
 
 Chưa cần: thanh toán, blueprint, trộn mã đề, TikZ.
 
+**Trạng thái pilot trực tiếp trên app hiện tại (13/08/2026):**
+
+- [x] Auth thật, session HttpOnly, workspace cách ly theo tài khoản.
+- [x] SQLite + file storage; autosave kho, hàng duyệt, source và đề đang ráp.
+- [x] Upload PDF/PNG/JPG/WebP, job log và pipeline OCR Gemini thật.
+- [x] Review bắt buộc, bulk approve, phát hiện trùng tuyệt đối, xem file nguồn thật.
+- [x] Kho lọc/tìm/sửa/xoá; ráp đề tự do; xuất DOCX equation-native có kill test.
+- [ ] Đưa OCR sang background queue có retry/resume từng trang.
+- [ ] Cắt hình từ PDF và gắn asset thật vào từng câu/DOCX.
+- [ ] Reset mật khẩu, email verification, rate-limit, antivirus và log vận hành.
+- [ ] Thay autosave snapshot bằng question/source rows chuẩn hoá trước khi scale nhiều instance.
+
+Phase 1 chỉ được coi là **ra khỏi prototype về mặt sản phẩm** khi 3–5 gia sư thật mỗi người hoàn
+thành ít nhất hai vòng `nạp → duyệt → ráp → xuất Word`, median duyệt dưới 20 giây/câu và không
+mất dữ liệu sau reload. Hạ tầng thật đã có; bằng chứng usage thật vẫn chưa có.
+
 ### Phase 2 — Tự động hoá (2–3 tuần)
 
 Blueprint lưu lại tái dùng · random thông minh theo ma trận · trộn mã đề 101–104 +
@@ -288,5 +303,5 @@ thật thì hiếm, đừng làm sớm.
 
 - [ ] Có làm chấm điểm/giao đề không, hay đứng ngoài để không đối đầu Azota? (đề xuất: đứng ngoài ở v1)
 - [ ] Giá cuối — chờ số liệu giá vốn từ Phase 0
-- [ ] 5 giáo viên đầu tiên dùng thử là ai? Cần có người thật trước khi code Phase 1
+- [ ] 3–5 gia sư đầu tiên dùng thử là ai? Cần có người thật trước khi mở rộng Phase 2
 - [ ] Có cần bản offline/desktop cho trường mạng yếu không?

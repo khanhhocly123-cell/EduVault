@@ -1,13 +1,26 @@
 import { SUBJECTS, TOPICS, topicsOf, TYPES, CLS, DIFFS, DNAME, FIGS, BANK, SOURCES,
          BLUEPRINTS, HEADER_TEMPLATES, DEFAULT_HEADER, DEFAULT_LAYOUT, PENDING,
-         PLANS, planOf, OCR_TIERS, PENDING_SEEDS, UNIT } from "./data.js";
+         PLANS, planOf, OCR_TIERS, UNIT } from "./data.js";
 
 /* ══════════════════════════════════════════════════════ phiên đăng nhập ══ */
 /* Bản thật dùng Supabase Auth. Ở đây chỉ giữ chỗ để luồng màn hình chạy đủ. */
 
-const SESSION_KEY = "eduvault.session";
-const session = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
-if(!session){ location.replace("./login.html"); }
+let session, BOOT;
+try {
+  const auth = await fetch("/api/session", { cache:"no-store" });
+  if(!auth.ok) throw new Error("unauthorized");
+  const { user } = await auth.json();
+  session = { email:user.email, name:user.name, plan:user.plan };
+  const state = await fetch("/api/workspace", { cache:"no-store" });
+  if(!state.ok) throw new Error("Không tải được workspace");
+  BOOT = await state.json();
+  BANK.splice(0, BANK.length, ...(BOOT.bank ?? []));
+  PENDING.splice(0, PENDING.length, ...(BOOT.pending ?? []));
+  SOURCES.splice(0, SOURCES.length, ...(BOOT.sources ?? []));
+} catch {
+  location.replace("./login.html");
+  throw new Error("Chưa đăng nhập");
+}
 
 /* ══════════════════════════════════════════════════ hiển thị LaTeX ══ */
 /* Bộ dựng công thức tại chỗ. Không phải KaTeX đầy đủ, nhưng nó TÁCH TOKEN rồi
@@ -265,9 +278,9 @@ const $$ = (sel,root=document) => [...root.querySelectorAll(sel)];
 const filters = { type:new Set(), diff:new Set(), topic:new Set(), src:new Set() };
 let search = "";
 let sortMode = "moi";           // "moi" | "cu" | "chuyende"
-let subject = "physics";
-let header = { ...DEFAULT_HEADER };
-let layout = { ...DEFAULT_LAYOUT };
+let subject = BOOT.subject === "math" ? "math" : "physics";
+let header = { ...DEFAULT_HEADER, ...(BOOT.header ?? {}) };
+let layout = { ...DEFAULT_LAYOUT, ...(BOOT.layout ?? {}) };
 const plan = planOf(session?.plan);
 /* Lượt quét còn lại trong tháng. Bản thật lấy từ máy chủ; ở đây trừ dần theo
    số trang đã nạp để thấy đúng hành vi. */
@@ -279,14 +292,33 @@ let finderFor = null;           // chỉ số phần đang mở thanh tìm câu
 
 /* Đề mở sẵn cho có cái mà nhìn. Câu phải lấy ĐÚNG DẠNG của từng phần — bản
    trước nhét thẳng BANK[2] (một câu trắc nghiệm) vào phần Đúng/Sai. */
-const firstOf = (type) => BANK.find(x => x.subject === "physics" && x.type === type);
+let DOC = Array.isArray(BOOT.doc) && BOOT.doc.length ? structuredClone(BOOT.doc) : [{ kind:"hdr" }];
 
-let DOC = [
-  { kind:"hdr" },
-  { kind:"sec", type:"MC", items:[
-      { mode:"q", qid:firstOf("MC").id }, { mode:"rnd", n:3, diff:"TH", picked:null }] },
-  { kind:"sec", type:"TF", items:[{ mode:"q", qid:firstOf("TF").id }] }
-];
+let saveBusy = false, saveAgain = false, syncPaused = false;
+let lastSnapshot = "";
+const workspaceSnapshot = () => ({
+  bank:BANK, pending:PENDING, sources:SOURCES.filter(x => !x._temp),
+  doc:DOC, header, layout, subject
+});
+async function saveWorkspace(force=false){
+  if(syncPaused) return;
+  const body = JSON.stringify(workspaceSnapshot());
+  if(!force && body === lastSnapshot) return;
+  if(saveBusy){ saveAgain = true; return; }
+  saveBusy = true;
+  try {
+    const r = await fetch("/api/workspace", {
+      method:"PUT", headers:{ "content-type":"application/json" }, body
+    });
+    if(!r.ok) throw new Error((await r.json()).error || "Không lưu được workspace");
+    lastSnapshot = body;
+  } catch(err){ console.error("[autosave]", err); }
+  finally {
+    saveBusy = false;
+    if(saveAgain){ saveAgain = false; void saveWorkspace(true); }
+  }
+}
+lastSnapshot = JSON.stringify(workspaceSnapshot());
 
 /* Đề mở sẵn ở trên là hàng dựng sẵn để nhìn cho có. Hỏi "có xoá không?" khi
    giáo viên chưa đụng vào nó thì chỉ tổ phiền. Cờ này bật ở lần sửa đầu tiên. */
@@ -2532,7 +2564,14 @@ function paintReview(){
   /* Ảnh gốc chỉ vẽ các câu CÙNG TRANG, không vẽ cả hàng chờ — nạp 40 trang mà
      dựng hết thì trang giấy dài vô tận. */
   const samePage = PENDING.filter(q => q.src === p.src && q.page === p.page);
-  $("#rvScan").innerHTML = samePage.map(q => {
+  const sourceRow = SOURCES.find(s => s.id === p.srcId || s.name === p.src);
+  const sourcePreview = sourceRow?.fileUrl
+    ? (sourceRow.kind === "Ảnh"
+      ? `<a href="${esc(sourceRow.fileUrl)}" target="_blank" title="Mở ảnh gốc ở tab mới">
+           <img src="${esc(sourceRow.fileUrl)}" alt="Trang đề gốc" style="display:block;width:100%;max-height:48vh;object-fit:contain;margin-bottom:12px;border-radius:6px"></a>`
+      : `<a class="btn btn-sm" href="${esc(sourceRow.fileUrl)}" target="_blank" style="margin-bottom:12px">Mở PDF gốc — trang ${p.page}</a>`)
+    : "";
+  $("#rvScan").innerHTML = sourcePreview + samePage.map(q => {
     const lines = (q.raw ?? []).map((tx,k) =>
       `<div class="ln${k ? " opt" : ""}"${q === p ? ' style="opacity:1"' : ""}>${esc(tx)}</div>`).join("");
     return q === p
@@ -2792,7 +2831,7 @@ const upload = {
   subject:"Vật lí", grade:12, srcLabel:"",
   tier: plan.tiers[0],            // mức đọc — gói thấp chỉ mở được mức Nhanh
   pages: 8,                        // số trang ước tính của tài liệu sắp nạp
-  autoApprove:false
+  autoApprove:false, file:null
 };
 
 function paintSources(){
@@ -2800,10 +2839,11 @@ function paintSources(){
   tb.innerHTML = "";
   for(const r of SOURCES){
     const tr = document.createElement("tr");
-    const cls = { done:"ok", review:"warn", run:"acc" }[r.state] ?? "";
+    const cls = { done:"ok", review:"warn", run:"acc", failed:"danger" }[r.state] ?? "";
+    const shortError = r.error ? String(r.error).trim().split(/\r?\n/).at(-1) : "";
     tr.innerHTML = `
       <td><b style="font-weight:500">${esc(r.name)}</b>
-        <div class="sub">${esc(r.kind)} · mức ${esc(OCR_TIERS[r.tier ?? "nhanh"].name)}</div>
+        <div class="sub">${esc(r.kind)} · mức ${esc(OCR_TIERS[r.tier ?? "nhanh"].name)}${shortError ? ` · ${esc(shortError).slice(0,120)}` : ""}</div>
         ${r.state === "run" ? `<div class="mini"><i style="width:${r.prog}%"></i></div>` : ""}</td>
       <td class="r">${r.pages}</td>
       <td class="r">${r.found ?? "—"}</td>
@@ -2875,96 +2915,78 @@ $("#srcRows").addEventListener("click", e => {
   }
 });
 
-/* Giả lập một lần nạp tài liệu để thấy đủ các trạng thái. Bản thật gọi
-   `npm run full` ở phase0 — đường dây đó ĐÃ CHẠY THẬT với Gemini, xem
-   HANDOFF.md mục 11. Chỗ còn thiếu là máy chủ đứng giữa, không phải model. */
-/* Giả lập một lần nạp tài liệu. Đường ống thật đã chạy được bằng Gemini
-   (HANDOFF mục 11); chỗ còn thiếu là máy chủ đứng giữa, không phải model.
-
-   Quan trọng: nó SINH RA CÂU CHỜ DUYỆT THẬT theo số trang — nạp 30 trang là
-   ra khoảng 150 câu. Không có cái đó thì không ai biết màn Duyệt vỡ ở đâu. */
-function makePending(docName, count, tier){
-  const out = [];
-  for(let i = 0; i < count; i++){
-    const seed = PENDING_SEEDS[i % PENDING_SEEDS.length];
-    const A = 1 + (i % 9), B = 2 + (i % 7);
-    const fill = (t) => String(t).replaceAll("{A}", A).replaceAll("{B}", B);
-    const q = {
-      id: `pg${Date.now().toString(36)}${i}`,
-      src: docName, page: Math.floor(i / 5) + 1,
-      model: OCR_TIERS[tier].model,
-      type: seed.type, diff: seed.diff, topic: seed.topic, grade: seed.grade,
-      stem: fill(seed.stem), sol: "",
-      answerSource: "solved", notes: null
-    };
-    if(seed.ch){ q.ch = seed.ch.map(fill); q.ans = 0; }
-    if(seed.tf) q.tf = seed.tf.map(([t,v]) => [fill(t), v]);
-    if(seed.sa) q.sa = { ...seed.sa, value: fill(seed.sa.value) };
-    q.raw = [`Câu ${i+1}. ${plain(q.stem).trim()}`,
-             q.ch ? q.ch.map((c,k) => `${LETTER[k]}. ${plain(c).trim()}`).join("     ") : ""];
-    // Cứ khoảng 9 câu thì có một câu model tự khai đọc không chắc — đúng kiểu
-    // scan thật, và đủ để thấy bộ lọc "Cần xem kĩ" có tác dụng.
-    if(i % 9 === 4) q.notes = "Chỗ số liệu bị nhoè, đọc chưa chắc. Đối chiếu ảnh gốc giúp.";
-    if(i % 11 === 7) q.figNote = "Có hình vẽ kèm câu này, chưa cắt được ảnh ra.";
-    out.push(q);
-  }
-  return out;
-}
-
-function simulateUpload(){
-  const { per, total } = scanCost();
+/* Upload thật: server lưu source, tạo job, gọi pipeline phase0 và trả câu vào hàng duyệt. */
+async function uploadReal(){
+  if(!upload.file){ toast("Chọn một file PDF hoặc ảnh đề trước đã"); return; }
+  const { total } = scanCost();
   if(total > scansLeft){
     toast(`Cần ${total} ${UNIT.many} mà chỉ còn ${scansLeft}. Nâng gói hoặc chọn mức đọc nhẹ hơn.`);
     return;
   }
 
-  const names = ["de-ninh-binh-2024.pdf","de-chuyen-vinh-l3.pdf","anh-chup-trang-7.jpg",
-                 "on-tap-hoc-ki-2.pdf","de-thu-lan-3.pdf"];
-  const name = names[SOURCES.length % names.length];
+  const name = upload.file.name;
   const row = {
+    _temp:true,
     name, kind: upload.tier === "ki" ? "Scan khó" : "PDF số",
     tier: upload.tier,
     pages: upload.pages, found: null, scans: total, state:"run",
     label:"Đang trích xuất", prog: 4
   };
   SOURCES.push(row);
-  scansLeft -= total;
+  syncPaused = true;
   paintSources(); estimate();
 
-  const timer = setInterval(() => {
-    row.prog = Math.min(100, row.prog + 11);
-    if(row.prog >= 100){
-      clearInterval(timer);
-      // Khoảng 5 câu mỗi trang — đúng mật độ một trang đề trắc nghiệm.
-      const found = Math.max(1, Math.round(upload.pages * 5));
-      row.found = found;
-      if(upload.autoApprove){
-        makePending(name, found, upload.tier).forEach(q => approve(q));
-        row.state = "done"; row.label = "Đã vào kho";
-        paintFacets(); paintKho();
-      } else {
-        PENDING.push(...makePending(name, found, upload.tier));
-        row.state = "review"; row.label = `Chờ duyệt ${found} câu`;
-      }
-      toast(`Xong ${name} — ${found} câu, hết ${total} ${UNIT.many}`);
-      paintReview(); paintHome();
-    }
-    paintSources();
-  }, 220);
+  const timer = setInterval(() => { row.prog = Math.min(92, row.prog + 3); paintSources(); }, 700);
+  try {
+    const form = new FormData();
+    form.set("file", upload.file);
+    form.set("subject", upload.subject === "Toán" ? "math" : "physics");
+    form.set("grade", String(upload.grade));
+    form.set("tier", upload.tier);
+    form.set("srcLabel", upload.srcLabel);
+    const response = await fetch("/api/upload", { method:"POST", body:form });
+    const result = await response.json();
+    if(!response.ok) throw Object.assign(new Error(result.error || "OCR thất bại"), { source:result.source });
+    Object.assign(row, result.source, { _temp:false });
+    PENDING.push(...result.questions);
+    scansLeft -= result.source.scans ?? result.source.pages;
+    upload.file = null;
+    $("#sourceFile").value = "";
+    $("#drop b").textContent = "Kéo file vào đây, hoặc bấm để chọn";
+    $("#drop span").textContent = "PDF hoặc ảnh chụp · tối đa 15 MB";
+    toast(`Xong ${name} — ${result.questions.length} câu đang chờ duyệt`);
+  } catch(err){
+    Object.assign(row, err.source ?? {}, { _temp:false, state:"failed", label:"OCR lỗi", error:err.message, prog:0 });
+    toast(`OCR lỗi: ${err.message}`);
+  } finally {
+    clearInterval(timer);
+    syncPaused = false;
+    paintSources(); paintReview(); paintHome();
+    await saveWorkspace(true);
+  }
 }
 
 function wireUpload(){
   const drop = $("#drop");
-  drop.addEventListener("click", simulateUpload);
+  const picker = $("#sourceFile");
+  const choose = files => {
+    const file = files?.[0];
+    if(!file) return;
+    upload.file = file;
+    drop.querySelector("b").textContent = file.name;
+    drop.querySelector("span").textContent = `${(file.size/1024/1024).toFixed(2)} MB · sẵn sàng nạp`;
+  };
+  drop.addEventListener("click", () => picker.click());
   drop.addEventListener("keydown", e => {
-    if(e.key === "Enter" || e.key === " "){ e.preventDefault(); simulateUpload(); }
+    if(e.key === "Enter" || e.key === " "){ e.preventDefault(); picker.click(); }
   });
+  picker.addEventListener("change", e => choose(e.target.files));
   ["dragenter","dragover"].forEach(ev =>
     drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("hot"); }));
   ["dragleave","drop"].forEach(ev =>
     drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("hot"); }));
-  drop.addEventListener("drop", simulateUpload);
-  $("#btnStartUpload").addEventListener("click", simulateUpload);
+  drop.addEventListener("drop", e => choose(e.dataTransfer.files));
+  $("#btnStartUpload").addEventListener("click", () => void uploadReal());
 
   $$("[data-u]").forEach(el => {
     const key = el.dataset.u;
@@ -3056,13 +3078,14 @@ function setSubject(next){
 }
 $$("[data-subj]").forEach(b => b.addEventListener("click", () => setSubject(b.dataset.subj)));
 
-$("#btnLogout").addEventListener("click", () => {
-  localStorage.removeItem(SESSION_KEY);
+$("#btnLogout").addEventListener("click", async () => {
+  await saveWorkspace(true);
+  await fetch("/api/auth/logout", { method:"POST" });
   location.replace("./login.html");
 });
 
 if(session?.email){
-  const who = session.email.split("@")[0];
+  const who = session.name || session.email.split("@")[0];
   $("#who").textContent = who.slice(0,2).toUpperCase();
   $("#who").title = session.email;
 }
@@ -3073,7 +3096,7 @@ if(session?.email){
    và bấm vào đâu tiếp theo. */
 
 function paintHome(){
-  const who = session?.email?.split("@")[0] ?? "";
+  const who = session?.name || session?.email?.split("@")[0] || "";
   $("#hiName").textContent = `Chào ${who || "thầy cô"}`;
   const pend = PENDING.length;
   $("#hiSub").textContent = pend
@@ -3099,7 +3122,7 @@ function paintHome(){
   const done = { nap: SOURCES.length > 0, duyet: pend === 0 && BANK.length > 0, rap: inDoc > 0 };
   $("#homeSteps").innerHTML = [
     ["nap","Nạp tài liệu","Kéo file PDF hay ảnh chụp trang đề vào. AI đọc ra câu hỏi kèm công thức.","nguon","Nạp tài liệu"],
-    ["duyet","Duyệt câu","Đặt cạnh ảnh gốc, chỗ nào hai model đọc lệch thì bạn chọn. Xong mới vào kho.","duyet","Mở màn duyệt"],
+    ["duyet","Duyệt câu","Đặt cạnh file gốc; AI đánh dấu câu trùng, hình thiếu và chỗ đọc không chắc. Xong mới vào kho.","duyet","Mở màn duyệt"],
     ["rap","Ráp đề và xuất Word","Xếp câu thành phần, chỉnh lề và watermark, tải về file .docx sửa được.","rap","Ráp đề"],
   ].map(([k,title,desc,goTo,cta],i) =>
     `<li class="${done[k] ? "done" : ""}">
@@ -3157,3 +3180,10 @@ $$("[data-go]").forEach(b => b.addEventListener("click", () => go(b.dataset.go))
 
 paintFacets(); paintKho(); paintCanvas(); renderSheet();
 paintSources(); wireUpload(); paintReview(); paintHome();
+setInterval(() => void saveWorkspace(), 1200);
+window.addEventListener("pagehide", () => {
+  const body = JSON.stringify(workspaceSnapshot());
+  if(body !== lastSnapshot){
+    navigator.sendBeacon("/api/workspace", new Blob([body], { type:"application/json" }));
+  }
+});
