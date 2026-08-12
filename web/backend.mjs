@@ -160,5 +160,9 @@ export function finishJob(id, userId, result, error = null) {
     .run(error ? "failed" : "review", result?.pages ?? null, result?.questions?.length ?? 0, error, now(), id, userId);
 }
 
+export function ingestJob(userId, id) {
+  return db.prepare("select * from ingest_jobs where id=? and user_id=?").get(id, userId) || null;
+}
+
 export function dataDir() { return DATA; }
 export function closeDb() { db.close(); }

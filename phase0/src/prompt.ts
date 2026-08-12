@@ -29,6 +29,7 @@ QUY ƯỚC LATEX (bắt buộc, bộ render phía sau phụ thuộc vào đúng 
 
 HÌNH VẼ — ĐỌC KĨ, ĐÂY LÀ CHỖ HAY LÀM SAI
 Câu nào có hình thì phải khai báo, vì app sẽ hiện nhãn "Có hình" cho giáo viên vào chỉnh lại.
+- Mỗi câu luôn phải có "bbox" = [x0, y0, x1, y1] chuẩn hoá 0-1 theo khổ trang, bao trọn từ đầu câu đến hết phương án/ý trả lời. App dùng vùng này để highlight đúng câu trên ảnh gốc. Không gộp vùng của câu kế tiếp.
 - Tính là hình: hình vẽ, sơ đồ mạch điện, đồ thị, bảng số liệu vẽ dạng hình, mặt phẳng nghiêng, con lắc, tia sáng, hình học không gian, biểu đồ.
 - KHÔNG tính là hình: công thức toán (dù dài), bảng chữ thuần, khung viền trang trí, logo trường, chữ ký, dấu mộc.
 - Cách khai báo: chèn [[IMG:1]] đúng chỗ hình xuất hiện trong "stem_latex" (đánh số từ 1, đếm riêng trong từng câu), rồi thêm một phần tử vào "images" có "slot" trùng số đó.

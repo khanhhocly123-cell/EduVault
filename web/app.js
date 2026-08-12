@@ -29,7 +29,8 @@ try {
    \vec, \perp, \mid, \infty là in nguyên mã LaTeX ra cho giáo viên đọc —
    môn Toán dính 8/21 câu ngay ở màn hình đầu tiên. */
 
-const esc = (s) => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const esc = (s) => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+  .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 
 /* Bảng ký hiệu và bộ tách token dùng chung với omml.js — xem latex-core.js.
    Trước đây mỗi bên một bảng, sửa một chỗ là hai bên lệch nhau ngay. */
@@ -233,11 +234,12 @@ function normFig(f){
            width:f.width ?? 45, place:f.place ?? "top" };
 }
 
-/** Nội dung hình: khoá hình dựng sẵn thì lấy SVG, data URL thì dựng thẻ img. */
+/** Nội dung hình: khoá dựng sẵn lấy SVG; ảnh crop/tải lên dùng thẻ img. */
 function figInner(src){
   if(!src) return "";
   if(FIGS[src]) return FIGS[src];
-  if(String(src).startsWith("data:")) return `<img src="${esc(src)}" alt="">`;
+  if(String(src).startsWith("data:") || String(src).startsWith("/api/"))
+    return `<img src="${esc(src)}" alt="">`;
   return `<div class="figmissing">Không tìm thấy hình “${esc(src)}”</div>`;
 }
 
@@ -2030,6 +2032,20 @@ async function prepareFigure(fig){
   const px = figPx(g.width);
   if(FIGS[g.src]) return await svgToPng(FIGS[g.src], px);
   if(String(g.src).startsWith("data:")) return await measureImage(g.src, px);
+  if(String(g.src).startsWith("/api/")){
+    try {
+      const response = await fetch(g.src);
+      if(!response.ok) return null;
+      const blob = await response.blob();
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      return await measureImage(dataUrl, px);
+    } catch { return null; }
+  }
   return null;
 }
 
@@ -2437,11 +2453,13 @@ $("#btnResolve").addEventListener("click", () => {
    khác nhau thì tô vàng bắt chọn. */
 
 let rvIdx = 0;
-let rvDoc = "all";        // lọc theo tài liệu
+let rvDoc = null;         // luôn duyệt đúng một tài liệu, không có hàng "tất cả"
 let rvFilter = "all";     // all | flag | clean | dup
 const rvDeferred = new Set();   // câu bấm "để sau", dồn xuống cuối
 /* Đếm việc đã xử lý trong phiên, để thanh tiến độ có mốc so. */
 const rvSession = { done:0 };
+
+const rvSourceKey = (p) => p.srcId ? `id:${p.srcId}` : `name:${p.src}`;
 
 /* ── ba tín hiệu MIỄN PHÍ thay cho việc chạy model thứ hai ──────────────────
  * Xem ghi chú trong data.js chỗ bỏ đối chiếu chéo. Mỗi cờ là một lý do CỤ THỂ
@@ -2464,7 +2482,7 @@ function flagsOf(p){
   if(dupOf(p))                    f.push({ k:"dup",  t:"Trùng câu đã có trong kho" });
   if(p.notes)                     f.push({ k:"note", t:p.notes });
   if(p.answerSource === "solved") f.push({ k:"ans",  t:"Đáp án do AI tự giải, đề gốc không in" });
-  if(p.figNote)                   f.push({ k:"fig",  t:"Có hình, chưa gắn ảnh" });
+  if(p.figNote && !hasFig(p))     f.push({ k:"fig",  t:"Có hình, chưa crop được ảnh" });
   return f;
 }
 
@@ -2476,7 +2494,7 @@ const isConfident = (p) => !flagsOf(p).some(isHeavy);
 
 /** Danh sách đang xét, sau khi lọc theo tài liệu và theo cờ. */
 function rvList(){
-  let list = PENDING.filter(p => rvDoc === "all" || p.src === rvDoc);
+  let list = PENDING.filter(p => rvSourceKey(p) === rvDoc);
   if(rvFilter === "flag")  list = list.filter(p => flagsOf(p).some(isHeavy));
   if(rvFilter === "clean") list = list.filter(isConfident);
   if(rvFilter === "dup")   list = list.filter(p => dupOf(p));
@@ -2487,8 +2505,14 @@ function rvList(){
 
 function docsInQueue(){
   const m = new Map();
-  for(const p of PENDING) m.set(p.src, (m.get(p.src) ?? 0) + 1);
-  return [...m.entries()];
+  for(const p of PENDING){
+    const key = rvSourceKey(p);
+    const source = SOURCES.find(s => s.id === p.srcId) ?? SOURCES.find(s => s.name === p.src);
+    const row = m.get(key) ?? { key, name:source?.name ?? p.src, count:0 };
+    row.count++;
+    m.set(key, row);
+  }
+  return [...m.values()];
 }
 
 function paintPendCount(){
@@ -2500,21 +2524,21 @@ function paintPendCount(){
 function paintReview(){
   paintPendCount();
 
+  const docs = docsInQueue();
+  if(!docs.some(doc => doc.key === rvDoc)) rvDoc = docs[0]?.key ?? null;
   const list = rvList();
   if(rvIdx >= list.length) rvIdx = Math.max(0, list.length - 1);
   const p = list[rvIdx];
 
   /* ── thanh trên: chọn tài liệu, lọc, tiến độ ── */
-  const docs = docsInQueue();
-  $("#rvDocs").innerHTML = docs.length > 1
-    ? `<select id="rvDocSel" aria-label="Chọn tài liệu">
-        <option value="all">Tất cả tài liệu (${PENDING.length})</option>
-        ${docs.map(([name,n]) =>
-          `<option value="${esc(name)}" ${rvDoc===name?"selected":""}>${esc(name)} (${n})</option>`).join("")}
-      </select>`
-    : `<span style="font-size:13px;color:var(--ink-3)">${esc(docs[0]?.[0] ?? "")}</span>`;
+  $("#rvDocs").innerHTML = docs.length
+    ? `<label class="rvdocpick"><span>Tài liệu đang duyệt</span>
+        <select id="rvDocSel" aria-label="Chọn tài liệu" ${docs.length === 1 ? "disabled" : ""}>
+          ${docs.map(doc => `<option value="${esc(doc.key)}" ${rvDoc===doc.key?"selected":""}>${esc(doc.name)} (${doc.count})</option>`).join("")}
+        </select></label>`
+    : `<span style="font-size:13px;color:var(--ink-3)">Chưa có tài liệu chờ duyệt</span>`;
 
-  const inScope = (q) => rvDoc === "all" || q.src === rvDoc;
+  const inScope = (q) => rvSourceKey(q) === rvDoc;
   const nFlag  = PENDING.filter(q => inScope(q) && flagsOf(q).some(isHeavy)).length;
   const nClean = PENDING.filter(q => inScope(q) && isConfident(q)).length;
   const nDup   = PENDING.filter(q => inScope(q) && dupOf(q)).length;
@@ -2530,12 +2554,12 @@ function paintReview(){
 
   /* Thanh tiến độ thay cho dãy vạch. 200 câu mà vẽ 200 vạch thì tràn màn hình
      và cũng chẳng nói lên điều gì. */
-  const total = PENDING.length;
+  const total = PENDING.filter(inScope).length;
   const done = rvSession.done;
   $("#rvBar").style.width = (total + done ? done / (total + done) * 100 : 0) + "%";
   $("#rvProgress").innerHTML = list.length
     ? `Câu <b>${rvIdx+1}</b><span class="muted">/${list.length}${
-        rvFilter !== "all" ? " đang lọc" : ""} · còn ${total} câu trong hàng chờ</span>`
+        rvFilter !== "all" ? " đang lọc" : ""} · còn ${total} câu trong tài liệu · tổng ${PENDING.length}</span>`
     : `<span class="muted">Không còn câu nào khớp bộ lọc</span>`;
   $("#rvDone").textContent = done ? `đã xử lý ${done}` : "";
 
@@ -2561,23 +2585,36 @@ function paintReview(){
   $("#rvFlags").innerHTML = flags.map(f =>
     `<span class="chip ${isHeavy(f) ? "warn" : "acc"}">${esc(f.k === "note" ? "Model đọc không chắc" : f.t)}</span>`).join("");
 
-  /* Ảnh gốc chỉ vẽ các câu CÙNG TRANG, không vẽ cả hàng chờ — nạp 40 trang mà
-     dựng hết thì trang giấy dài vô tận. */
-  const samePage = PENDING.filter(q => q.src === p.src && q.page === p.page);
+  /* Chỉ dựng đúng MỘT trang của tài liệu đang duyệt. Bbox chuẩn hoá đặt lớp
+     highlight lên ảnh trang nên đổi câu là đổi vị trí ngay, không phải dò bằng mắt. */
+  const samePage = PENDING.filter(q => rvSourceKey(q) === rvSourceKey(p) && q.page === p.page);
   const sourceRow = SOURCES.find(s => s.id === p.srcId || s.name === p.src);
-  const sourcePreview = sourceRow?.fileUrl
-    ? (sourceRow.kind === "Ảnh"
-      ? `<a href="${esc(sourceRow.fileUrl)}" target="_blank" title="Mở ảnh gốc ở tab mới">
-           <img src="${esc(sourceRow.fileUrl)}" alt="Trang đề gốc" style="display:block;width:100%;max-height:48vh;object-fit:contain;margin-bottom:12px;border-radius:6px"></a>`
-      : `<a class="btn btn-sm" href="${esc(sourceRow.fileUrl)}" target="_blank" style="margin-bottom:12px">Mở PDF gốc — trang ${p.page}</a>`)
-    : "";
-  $("#rvScan").innerHTML = sourcePreview + samePage.map(q => {
+  const pageUrl = sourceRow?.pageUrl
+    ? sourceRow.pageUrl.replace("{page}", String(p.page))
+    : (sourceRow?.kind === "Ảnh" ? sourceRow.fileUrl : null);
+  const box = Array.isArray(p.bbox) && p.bbox.length === 4 ? p.bbox : null;
+  const highlight = box ? `<div class="sourcehl" data-source-highlight style="left:${box[0]*100}%;top:${box[1]*100}%;width:${(box[2]-box[0])*100}%;height:${(box[3]-box[1])*100}%">
+      <span>Câu đang duyệt</span></div>` : "";
+  const fallbackLines = samePage.map(q => {
     const lines = (q.raw ?? []).map((tx,k) =>
       `<div class="ln${k ? " opt" : ""}"${q === p ? ' style="opacity:1"' : ""}>${esc(tx)}</div>`).join("");
-    return q === p
-      ? `<div class="here"><span class="tagtop">Câu đang duyệt</span>${lines}</div>`
-      : lines;
+    return q === p ? `<div class="here"><span class="tagtop">Câu đang duyệt</span>${lines}</div>` : lines;
   }).join("");
+  $("#rvScan").innerHTML = pageUrl
+    ? `<div class="sourcehead"><b>Trang ${p.page}</b><a href="${esc(sourceRow.fileUrl)}" target="_blank">Mở file gốc</a></div>
+       <div class="sourcepage"><img id="rvPageImage" src="${esc(pageUrl)}" alt="Trang ${p.page} của ${esc(sourceRow.name)}">${highlight}</div>
+       ${box ? "" : '<div class="sourcehint">Tài liệu cũ chưa có tọa độ câu. Nạp lại để bật highlight chính xác.</div>'}`
+    : (sourceRow?.fileUrl
+      ? `<a class="btn btn-sm" href="${esc(sourceRow.fileUrl)}" target="_blank">Mở PDF gốc — trang ${p.page}</a>${fallbackLines}`
+      : fallbackLines);
+
+  const focusHighlight = () => {
+    const wrap = $(".scanwrap");
+    const mark = $("[data-source-highlight]", $("#rvScan"));
+    if(wrap && mark) wrap.scrollTo({ top:Math.max(0, mark.offsetTop - wrap.clientHeight/3), behavior:"smooth" });
+  };
+  $("#rvPageImage")?.addEventListener("load", focusHighlight, { once:true });
+  requestAnimationFrame(focusHighlight);
 
   let stemHtml = tex(p.stem);
   if(p.mark){
@@ -2598,14 +2635,19 @@ function paintReview(){
         </div>`).join("")}
     </div>`;
 
-  if(p.figNote){
+  if(hasFig(p)){
+    h += `<div class="autocrop">
+      <div><b>Hình đã crop tự động</b><span>${esc(p.figNote || "Trích từ trang gốc")}</span></div>
+      <div class="autocrop-img">${figInner(normFig(p.fig).src)}</div>
+    </div>`;
+  } else if(p.figNote){
     h += `<div class="conflict" style="background:var(--acc-tint);box-shadow:inset 0 0 0 1px var(--acc)">
       <svg width="16" height="16" viewBox="0 0 256 256" fill="none" stroke="#5d5294"
            stroke-width="16" aria-hidden="true" style="flex:none">
         <rect x="32" y="48" width="192" height="160" rx="12"></rect>
         <path d="M32 168l52-52 44 44 28-28 40 40"></path></svg>
       <span class="t" style="color:var(--acc-ink)"><b>Câu này có hình</b> —
-        “${esc(p.figNote)}”. Duyệt xong vào phần Sửa để gắn ảnh.</span>
+        “${esc(p.figNote)}”. Bbox không hợp lệ nên chưa crop được; có thể gắn ảnh thủ công.</span>
     </div>`;
   }
 
@@ -2700,7 +2742,7 @@ function approve(p){
     subject: p.topic.startsWith("m") ? "math" : "physics",
     src: p.srcLabel ?? p.src.replace(/\.[a-z]+$/,""), ai:true,
     stem:p.stem, sol:p.sol || "",
-    fig:null, figNote:p.figNote ?? null,
+    fig:p.fig ? structuredClone(p.fig) : null, figNote:p.figNote ?? null,
     answerSource:p.answerSource ?? "solved"
   };
   if(p.type === "MC"){ q.ch = p.ch; q.ans = p.ans; }
@@ -2728,7 +2770,8 @@ function afterReviewChange(){
 function syncReviewSource(){
   for(const row of SOURCES){
     if(row.state !== "review") continue;
-    const left = PENDING.filter(p => p.src === row.name).length;
+    const rowKey = row.id ? `id:${row.id}` : `name:${row.name}`;
+    const left = PENDING.filter(p => rvSourceKey(p) === rowKey).length;
     if(left) row.label = `Chờ duyệt ${left} câu`;
     else { row.state = "done"; row.label = "Đã vào kho"; }
   }
@@ -2773,7 +2816,7 @@ $("#rvEdit").addEventListener("click", () => {
 });
 
 $("#btnApproveAll").addEventListener("click", () => {
-  const scope = PENDING.filter(p => (rvDoc === "all" || p.src === rvDoc) && isConfident(p));
+  const scope = PENDING.filter(p => rvSourceKey(p) === rvDoc && isConfident(p));
   if(!scope.length){ toast("Câu nào cũng còn chỗ cần mắt người"); return; }
   if(scope.length > 20 &&
      !confirm(`Duyệt một lượt ${scope.length} câu vào kho?\n\n` +
@@ -2792,7 +2835,7 @@ $("#btnApproveAll").addEventListener("click", () => {
 });
 
 $("#btnDropDup").addEventListener("click", () => {
-  const dups = PENDING.filter(p => (rvDoc === "all" || p.src === rvDoc) && dupOf(p));
+  const dups = PENDING.filter(p => rvSourceKey(p) === rvDoc && dupOf(p));
   if(!dups.length) return;
   if(!confirm(`Bỏ ${dups.length} câu đã có sẵn trong kho?`)) return;
   dups.forEach(removePending);
@@ -2810,7 +2853,7 @@ $("#rvFilters").addEventListener("click", e => {
 
 $("#rvDocs").addEventListener("change", e => {
   if(e.target.id !== "rvDocSel") return;
-  rvDoc = e.target.value; rvIdx = 0; paintReview();
+  rvDoc = e.target.value; rvIdx = 0; rvFilter = "all"; paintReview();
 });
 
 document.addEventListener("keydown", e => {
@@ -2850,7 +2893,7 @@ function paintSources(){
       <td class="r">${r.scans ?? "—"}</td>
       <td><span class="chip ${cls}">${esc(r.label)}</span></td>
       <td class="r">${
-        r.state === "review" ? '<button class="btn btn-sm btn-primary" type="button" data-review>Duyệt</button>' :
+        r.state === "review" ? `<button class="btn btn-sm btn-primary" type="button" data-review="${esc(r.id ? `id:${r.id}` : `name:${r.name}`)}">Duyệt</button>` :
         r.state === "done"   ? '<button class="btn btn-sm btn-ghost" type="button" data-see="'+esc(r.name)+'">Xem câu</button>' : ""
       }</td>`;
     tb.appendChild(tr);
@@ -2904,7 +2947,8 @@ function paintCapacity(){
 }
 
 $("#srcRows").addEventListener("click", e => {
-  if(e.target.closest("[data-review]")) go("duyet");
+  const review = e.target.closest("[data-review]");
+  if(review){ rvDoc = review.dataset.review; rvIdx = 0; rvFilter = "all"; go("duyet"); paintReview(); }
   const see = e.target.closest("[data-see]");
   if(see){
     filters.src.clear();

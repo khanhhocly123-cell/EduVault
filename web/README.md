@@ -22,14 +22,19 @@ Mở `http://localhost:5173/index.html`. Dữ liệu nằm trong `web/data/` và
 - SQLite + filesystem; autosave kho, hàng duyệt, source, metadata và đề đang ráp.
 - Upload PDF/PNG/JPG/WebP tối đa 15 MB; source/job/error được lưu trước và sau OCR.
 - Gọi trực tiếp pipeline `phase0` bằng Node/tsx, output tách riêng theo job để không ghi đè.
-- Review file gốc thật, sửa metadata/đáp án, duyệt/bỏ/bulk approve; bắt trùng normalize tuyệt đối.
+- Review theo từng tài liệu: chọn source trước, không gộp câu của nhiều file vào một hàng duyệt.
+- Trang gốc được render ngay trong review; chọn câu sẽ nhảy đúng trang và highlight vùng câu.
+- Hình trong câu được crop thành asset thật, có preview trong review và được gắn vào câu/DOCX khi duyệt.
+- Sửa metadata/đáp án, duyệt/bỏ/bulk approve trong phạm vi tài liệu; bắt trùng normalize tuyệt đối.
 - Kho tìm/lọc/sửa/xoá, ráp đề và xuất DOCX ngay trong UI cũ; kill test equation-native vẫn qua.
-- Test tự động cách ly workspace và mapping output OCR; smoke test UI qua reload không mất dữ liệu.
+- Test tự động cách ly workspace, mapping OCR, bbox và crop; smoke test UI qua reload không mất dữ liệu.
+
+Nguồn đã OCR trước thay đổi này chưa có bbox trang/crop; cần upload lại để có highlight và asset tự động.
+Nếu một câu có nhiều hình, pipeline giữ toàn bộ crop trong `figures`; UI/DOCX hiện gắn crop đầu tiên.
 
 ## Còn lại trước khi scale
 
 - OCR hiện chạy trong request: cần queue nền, retry/resume từng trang và progress polling.
-- Chưa crop hình từ PDF để gắn asset thật vào câu và DOCX.
 - Workspace đang autosave snapshot JSON trong SQLite để giữ toàn bộ engine cũ; cần chuẩn hoá
   question/source/exam rows trước khi chạy nhiều server instance.
 - Chưa có reset mật khẩu/email verification, quota server-side, rate limit, antivirus, backup và

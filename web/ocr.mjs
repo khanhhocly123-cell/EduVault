@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { mkdir, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import sharp from "sharp";
 import { dataDir } from "./backend.mjs";
 
 const WEB = path.dirname(fileURLToPath(import.meta.url));
@@ -45,11 +46,57 @@ async function pageFiles(source, jobDir) {
 }
 
 const answerIndex = letter => ({ A: 0, B: 1, C: 2, D: 3 })[letter] ?? 0;
+
+export function normalizedBbox(value) {
+  if (!Array.isArray(value) || value.length !== 4) return null;
+  const box = value.map(Number);
+  if (!box.every(Number.isFinite)) return null;
+  const [x0, y0, x1, y1] = box.map(n => Math.max(0, Math.min(1, n)));
+  return x1 > x0 && y1 > y0 ? [x0, y0, x1, y1] : null;
+}
+
+async function cropFigures(questions, pageFile, jobDir, jobId, page) {
+  const assetsDir = path.join(jobDir, "assets");
+  await mkdir(assetsDir, { recursive: true });
+  const metadata = await sharp(pageFile).metadata();
+  const width = Number(metadata.width) || 0;
+  const height = Number(metadata.height) || 0;
+  if (!width || !height) return questions;
+
+  for (let qi = 0; qi < questions.length; qi++) {
+    const q = questions[qi];
+    const figures = [];
+    for (const image of Array.isArray(q.images) ? q.images : []) {
+      const bbox = normalizedBbox(image.bbox);
+      if (!bbox) continue;
+      const pad = 6;
+      const left = Math.max(0, Math.floor(bbox[0] * width) - pad);
+      const top = Math.max(0, Math.floor(bbox[1] * height) - pad);
+      const right = Math.min(width, Math.ceil(bbox[2] * width) + pad);
+      const bottom = Math.min(height, Math.ceil(bbox[3] * height) + pad);
+      if (right <= left || bottom <= top) continue;
+      const slot = Number(image.slot) || figures.length + 1;
+      const filename = `p${page}-q${qi + 1}-s${slot}.png`;
+      await sharp(pageFile).extract({ left, top, width: right - left, height: bottom - top })
+        .png({ compressionLevel: 9 }).toFile(path.join(assetsDir, filename));
+      figures.push({
+        slot, bbox, caption: image.caption || null, note: image.note || null,
+        src: `/api/jobs/${jobId}/assets/${filename}`,
+        width: Number(image.width_pct) || 45,
+        place: image.placement || "top",
+      });
+    }
+    q._figures = figures;
+  }
+  return questions;
+}
+
 export function toAppQuestion(q, source, page, index, options) {
   const topic = q.topic_code || (options.subject === "math" ? "m12.derivative" : "p12.thermal");
   const item = {
     id: randomUUID(), src: source.filename, srcId: source.id, page,
     model: configuredModel(), type: q.type, diff: q.difficulty || "TH",
+    bbox: normalizedBbox(q.bbox),
     topic, grade: q.grade || options.grade || 12, stem: q.stem_latex || "", sol: q.solution_latex || "",
     answerSource: q.answer_source || "none", notes: q.notes || null,
     raw: [`Câu ${index + 1}. ${String(q.stem_latex || "").replace(/\$[^$]*\$/g, " ").trim()}`],
@@ -59,6 +106,10 @@ export function toAppQuestion(q, source, page, index, options) {
   if (q.type === "TF") item.tf = (q.tf_statements || []).map(x => [x.text_latex, Boolean(x.is_true)]);
   if (q.type === "SHORT" && q.short_answer) item.sa = { value: String(q.short_answer.value), unit: q.short_answer.unit || "", tol: String(q.short_answer.tolerance ?? 0) };
   if (Array.isArray(q.images) && q.images.length) item.figNote = q.images.map(x => x.note || x.caption || "Có hình trong đề gốc").join("; ");
+  if (Array.isArray(q._figures) && q._figures.length) {
+    item.figures = q._figures;
+    item.fig = q._figures[0];
+  }
   return item;
 }
 
@@ -81,6 +132,7 @@ export async function extractSource(source, jobId, options) {
     await run(process.execPath, args, PHASE0);
     const payload = JSON.parse(await readFile(output, "utf8"));
     const pageQuestions = Array.isArray(payload.questions) ? payload.questions : [];
+    await cropFigures(pageQuestions, pages[i], jobDir, jobId, i + 1);
     pageQuestions.forEach((q, index) => questions.push(toAppQuestion(q, source, i + 1, index, options)));
   }
   return { pages: pages.length, questions };

@@ -1,10 +1,10 @@
 import { createServer } from "node:http";
 import { Readable } from "node:stream";
-import { readFile } from "node:fs/promises";
-import { extname, join, resolve, sep } from "node:path";
+import { readFile, readdir } from "node:fs/promises";
+import { basename, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  clearCookie, createJob, currentUser, finishJob, loadWorkspace, login, logout, register,
+  clearCookie, createJob, currentUser, dataDir, finishJob, ingestJob, loadWorkspace, login, logout, register,
   saveWorkspace, sessionCookie, sourceFile, storeUpload,
 } from "./backend.mjs";
 import { configuredModel, extractSource } from "./ocr.mjs";
@@ -88,6 +88,9 @@ async function api(req, res, url) {
           tier, pages: result.pages, found: result.questions.length, scans: result.pages,
           state: "review", label: `Chờ duyệt ${result.questions.length} câu`, prog: 100,
           fileUrl: `/api/sources/${source.id}/file`,
+          pageUrl: source.mimeType === "application/pdf"
+            ? `/api/jobs/${jobId}/pages/{page}`
+            : `/api/sources/${source.id}/file`,
         };
         // Ghi ngay ở máy chủ: kể cả tab đóng sau khi OCR xong, kết quả vẫn còn.
         const state = loadWorkspace(user.id);
@@ -116,6 +119,36 @@ async function api(req, res, url) {
       const body = await readFile(String(source.storage_path));
       res.writeHead(200, { "content-type": String(source.mime_type), "cache-control": "private, no-store",
         "content-disposition": `inline; filename*=UTF-8''${encodeURIComponent(String(source.filename))}` });
+      return res.end(body);
+    }
+
+    const jobPageMatch = /^\/api\/jobs\/([^/]+)\/pages\/(\d+)$/.exec(url.pathname);
+    if (req.method === "GET" && jobPageMatch) {
+      const user = requireUser(req, res); if (!user) return;
+      const job = ingestJob(user.id, jobPageMatch[1]);
+      if (!job) return json(res, 404, { error: "Không tìm thấy lượt OCR" });
+      const page = Number(jobPageMatch[2]);
+      const jobDir = join(dataDir(), "jobs", String(job.id));
+      const files = (await readdir(jobDir))
+        .filter(name => /^page-\d+\.png$/i.test(name))
+        .sort((a, b) => Number(a.match(/\d+/)?.[0]) - Number(b.match(/\d+/)?.[0]));
+      const filename = files[page - 1];
+      if (!filename) return json(res, 404, { error: "Không tìm thấy ảnh trang" });
+      const body = await readFile(join(jobDir, filename));
+      res.writeHead(200, { "content-type": "image/png", "cache-control": "private, max-age=3600" });
+      return res.end(body);
+    }
+
+    const jobAssetMatch = /^\/api\/jobs\/([^/]+)\/assets\/([^/]+)$/.exec(url.pathname);
+    if (req.method === "GET" && jobAssetMatch) {
+      const user = requireUser(req, res); if (!user) return;
+      const job = ingestJob(user.id, jobAssetMatch[1]);
+      if (!job) return json(res, 404, { error: "Không tìm thấy lượt OCR" });
+      const filename = basename(jobAssetMatch[2]);
+      if (filename !== jobAssetMatch[2] || !/^[a-z0-9._-]+$/i.test(filename))
+        return json(res, 400, { error: "Tên asset không hợp lệ" });
+      const body = await readFile(join(dataDir(), "jobs", String(job.id), "assets", filename));
+      res.writeHead(200, { "content-type": "image/png", "cache-control": "private, max-age=86400" });
       return res.end(body);
     }
     return json(res, 404, { error: "API không tồn tại" });

@@ -78,6 +78,8 @@ export const AnswerSource = z.enum([
 export const Question = z.object({
   type: QuestionType,
   stem_latex: z.string(),
+  /** Vùng bao trọn câu trên trang gốc, chuẩn hoá 0-1: [x0, y0, x1, y1]. */
+  bbox: z.array(z.number()),
   images: z.array(ImageRef),
   mc_choices: z.array(McChoice).nullable(),
   mc_correct: z.enum(["A", "B", "C", "D"]).nullable(),
@@ -144,6 +146,13 @@ export interface ExamDoc {
 export function validateQuestion(q: TQuestion, index: number): string[] {
   const at = `câu ${index + 1} (${q.type})`;
   const errs: string[] = [];
+
+  const validBox = (box: number[]) => box.length === 4 && box.every((n) => Number.isFinite(n) && n >= 0 && n <= 1)
+    && box[2]! > box[0]! && box[3]! > box[1]!;
+  if (!validBox(q.bbox)) errs.push(`${at}: bbox câu phải là [x0,y0,x1,y1] chuẩn hoá 0-1 và có diện tích dương`);
+  q.images.forEach((image) => {
+    if (!validBox(image.bbox)) errs.push(`${at}: bbox hình slot ${image.slot} không hợp lệ`);
+  });
 
   if (q.type === "MC") {
     if (!q.mc_choices || q.mc_choices.length !== 4)
