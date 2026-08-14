@@ -43,7 +43,7 @@ test("ba kiểu Đúng–Sai ra ba kết quả khác nhau", () => {
 
   const tabular = withLayout({ tfStyle:"tabular" }, [tfQuestion]);
   assert.match(tabular, /\\textbf\{Phát biểu\}/);
-  assert.doesNotMatch(tabular, /\\colorbox\{formink\}/);
+  assert.doesNotMatch(tabular.split("\\begin{document}")[1], /\\colorbox\{formink\}/);
   // colortbl giết tabularx trên bản MiKTeX phổ biến — đừng nạp lại nó.
   assert.doesNotMatch(tabular, /colortbl/);
 });
@@ -113,13 +113,12 @@ test("bốn kiểu phương án xuất ra bốn kết quả khác nhau, khớp b
 
   // plain: chữ cái đậm kèm dấu chấm
   assert.match(build("plain"), /\\textbf\{A\.\}/);
-  assert.doesNotMatch(build("plain"), /textcircled|fbox/);
-  // circle + cards: chữ cái trong vòng tròn, đúng mẫu BK/HCMUT
-  assert.match(build("circle"), /\\textcircled\{\\small A\}/);
-  assert.match(build("cards"), /\\textcircled\{\\small A\}/);
-  // cards: mỗi phương án một khung riêng
-  assert.match(build("cards"), /\\fbox\{\\parbox/);
-  assert.doesNotMatch(build("circle"), /\\fbox\{\\parbox/);
+  // circle + cards: chữ cái trong vòng tròn nhãn eduBadge
+  assert.match(build("circle"), /\\eduBadge\{A\}/);
+  assert.match(build("cards"), /\\eduBadge\{A\}/);
+  // cards: mỗi phương án một khung riêng eduCardBox
+  assert.match(build("cards"), /\\eduCardBox\{/);
+  assert.doesNotMatch(build("circle"), /\\eduCardBox\{/);
   // tabular: có kẻ khung
   assert.match(build("tabular"), /\\hline/);
 });

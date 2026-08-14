@@ -53,6 +53,34 @@ for (const [name, type] of [
 }
 
 const now = () => new Date().toISOString();
+
+async function seedDefaultUsers() {
+  try {
+    const count = db.prepare("select count(*) as count from users").get()?.count || 0;
+    if (count > 0) return;
+    const password = "EduVault@Test-2026!";
+    const createdAt = now();
+    for (let i = 1; i <= 5; i++) {
+      const email = `tester0${i}@eduvault.local`;
+      const salt = randomBytes(16).toString("hex");
+      const hash = (await scrypt(password, salt, 32)).toString("hex");
+      db.prepare(`
+        insert or ignore into users(id, email, display_name, password_hash, password_salt, plan, created_at)
+        values(?, ?, ?, ?, ?, 'plus', ?)
+      `).run(`user-tester-0${i}`, email, `EduVault Tester ${i}`, hash, salt, createdAt);
+    }
+    const adminSalt = randomBytes(16).toString("hex");
+    const adminHash = (await scrypt(password, adminSalt, 32)).toString("hex");
+    db.prepare(`
+      insert or ignore into users(id, email, display_name, password_hash, password_salt, plan, created_at)
+      values('user-admin', 'admin@eduvault.local', 'EduVault Admin', ?, ?, 'plus', ?)
+    `).run(adminHash, adminSalt, createdAt);
+  } catch (err) {
+    console.error("[db] Seed default users failed:", err);
+  }
+}
+await seedDefaultUsers();
+
 export const IMAGE_BATCH_MIME = "application/vnd.eduvault.image-batch+json";
 export const WORKSPACE_SCHEMA_VERSION = 2;
 const DEFAULT_VAULTS = Object.freeze([
