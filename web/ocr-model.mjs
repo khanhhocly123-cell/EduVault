@@ -23,7 +23,7 @@ import { fileURLToPath } from "node:url";
 
 const WEB = path.dirname(fileURLToPath(import.meta.url));
 const PHASE0 = path.resolve(WEB, "..", "phase0");
-const FALLBACK_MODEL = "gemini-3.5-flash";
+const FALLBACK_MODEL = "stali:gpt-5.6-luna";
 
 /* ── cấu hình ────────────────────────────────────────────────────────────── */
 
@@ -49,7 +49,11 @@ export function envValue(name) {
 }
 
 export function configuredModel() {
-  return envValue("DE_MODEL") || FALLBACK_MODEL;
+  const model = envValue("DE_MODEL");
+  if (model) return model;
+  if (envValue("STALI_API_KEY")) return "stali:gpt-5.6-luna";
+  if (envValue("OPENROUTER_API_KEY")) return "openrouter:google/gemini-2.5-flash";
+  return FALLBACK_MODEL;
 }
 
 /**
