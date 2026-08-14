@@ -31,7 +31,7 @@ const doc={
   layout:{marginCm:{top:1,right:1,bottom:1,left:1},mcColumns:4,watermark:"EDUVAULT"},questions,
 };
 await writeFile(join(out,"exam.tex"),buildLatexDocument(doc,{assets:{"q:0":"sample-graph.png"}}),"utf8");
-const pdflatex=process.env.PDFLATEX_PATH || "C:\\Users\\leose\\AppData\\Local\\Programs\\MiKTeX\\miktex\\bin\\x64\\pdflatex.exe";
+const pdflatex=process.env.PDFLATEX_PATH || "pdflatex";
 await new Promise((ok,fail)=>{
   const child=spawn(pdflatex,["-interaction=nonstopmode","-halt-on-error","-no-shell-escape","exam.tex"],{cwd:out,stdio:"inherit",windowsHide:true});
   child.on("error",fail);child.on("close",code=>code===0?ok():fail(new Error(`pdfLaTeX exit ${code}`)));

@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { Readable } from "node:stream";
 import { readFile, readdir, mkdtemp, writeFile, rm } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { spawn } from "node:child_process";
 import { basename, extname, join, resolve, sep } from "node:path";
@@ -59,18 +60,65 @@ function requireOcrQuota(user){
   if(PUBLIC_BETA && ingestJobCount(user.id) >= BETA_OCR_LIMIT)
     throw Object.assign(new Error(`Tài khoản beta đã dùng đủ ${BETA_OCR_LIMIT} lượt OCR. Liên hệ chủ bản test để mở thêm.`), { status:429 });
 }
-const PDFLATEX = process.env.PDFLATEX_PATH || "C:\\Users\\leose\\AppData\\Local\\Programs\\MiKTeX\\miktex\\bin\\x64\\pdflatex.exe";
+/* ── Tìm pdflatex ─────────────────────────────────────────────────────────
+ *
+ * Trước đây đường dẫn MiKTeX của một máy cụ thể bị hard-code làm mặc định, nên
+ * mọi máy khác (và container Linux trên Render) đều chết với ENOENT. Nay thứ tự
+ * là: PDFLATEX_PATH nếu được đặt → `pdflatex` trong PATH → các vị trí cài đặt
+ * quen thuộc trên Windows. Ứng viên nào ENOENT thì thử tiếp ứng viên sau, và
+ * cái nào chạy được sẽ được nhớ lại cho những lần biên dịch sau.
+ */
+const LATEX_EXE = process.platform === "win32" ? "pdflatex.exe" : "pdflatex";
+function windowsLatexCandidates(){
+  const paths=[];
+  const localApp=process.env.LOCALAPPDATA, programFiles=process.env.ProgramFiles, programFilesX86=process.env["ProgramFiles(x86)"];
+  for(const base of [localApp&&join(localApp,"Programs","MiKTeX"),programFiles&&join(programFiles,"MiKTeX"),programFilesX86&&join(programFilesX86,"MiKTeX")]){
+    if(!base)continue;
+    paths.push(join(base,"miktex","bin","x64",LATEX_EXE),join(base,"miktex","bin",LATEX_EXE));
+  }
+  for(const year of ["2026","2025","2024","2023"])
+    paths.push(join("C:\\texlive",year,"bin","windows",LATEX_EXE),join("C:\\texlive",year,"bin","win32",LATEX_EXE));
+  return paths;
+}
+function pdfLatexCandidates(){
+  const configured=(process.env.PDFLATEX_PATH||"").trim();
+  if(configured)return [configured];
+  const paths=["pdflatex"];
+  if(process.platform==="win32")paths.push(...windowsLatexCandidates().filter(path=>existsSync(path)));
+  else for(const path of ["/usr/bin/pdflatex","/usr/local/bin/pdflatex"])if(existsSync(path))paths.push(path);
+  return paths;
+}
+const LATEX_MISSING="Không tìm thấy pdflatex trên máy chủ. Cài MiKTeX/TeX Live rồi mở lại app, hoặc đặt biến môi trường PDFLATEX_PATH trỏ tới pdflatex.";
 const LATEX_MAX_MS=Math.max(60_000,Number(process.env.EDUVAULT_LATEX_TIMEOUT_MS)||180_000);
 let latexQueue=Promise.resolve();
-function runPdfLatex(cwd){
-  const run=()=>new Promise((resolve,reject)=>{
-    const child=spawn(PDFLATEX,["-interaction=nonstopmode","-halt-on-error","-no-shell-escape","exam.tex"],{cwd,windowsHide:true});
+let resolvedPdfLatex=null;
+function spawnPdfLatex(command,cwd){
+  return new Promise((resolve,reject)=>{
+    const child=spawn(command,["-interaction=nonstopmode","-halt-on-error","-no-shell-escape","exam.tex"],{cwd,windowsHide:true});
     let output="",settled=false;
     const finish=(error,value)=>{if(settled)return;settled=true;clearTimeout(timer);error?reject(error):resolve(value);};
     const timer=setTimeout(()=>{child.kill();finish(new Error("LaTeX quá thời gian biên dịch"));},LATEX_MAX_MS);
     child.stdout.on("data",chunk=>output+=chunk);child.stderr.on("data",chunk=>output+=chunk);
     child.on("error",error=>finish(error));child.on("close",code=>code===0?finish(null,output):finish(new Error(output.slice(-1600)||`pdfLaTeX thoát mã ${code}`)));
   });
+}
+function runPdfLatex(cwd){
+  const run=async()=>{
+    const candidates=[...new Set([resolvedPdfLatex,...pdfLatexCandidates()].filter(Boolean))];
+    let lastError=null;
+    for(const command of candidates){
+      try{
+        const output=await spawnPdfLatex(command,cwd);
+        resolvedPdfLatex=command;
+        return output;
+      }catch(error){
+        if(error?.code!=="ENOENT")throw error;
+        if(resolvedPdfLatex===command)resolvedPdfLatex=null;
+        lastError=error;
+      }
+    }
+    throw Object.assign(new Error(LATEX_MISSING),{cause:lastError});
+  };
   const queued=latexQueue.then(run,run);
   latexQueue=queued.catch(()=>{});
   return queued;
