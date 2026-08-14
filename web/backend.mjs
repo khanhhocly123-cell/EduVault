@@ -56,25 +56,32 @@ const now = () => new Date().toISOString();
 
 async function seedDefaultUsers() {
   try {
-    const count = db.prepare("select count(*) as count from users").get()?.count || 0;
-    if (count > 0) return;
     const password = "EduVault@Test-2026!";
     const createdAt = now();
     for (let i = 1; i <= 5; i++) {
       const email = `tester0${i}@eduvault.local`;
-      const salt = randomBytes(16).toString("hex");
-      const hash = (await scrypt(password, salt, 32)).toString("hex");
-      db.prepare(`
-        insert or ignore into users(id, email, display_name, password_hash, password_salt, plan, created_at)
-        values(?, ?, ?, ?, ?, 'plus', ?)
-      `).run(`user-tester-0${i}`, email, `EduVault Tester ${i}`, hash, salt, createdAt);
+      const pass = await passwordHash(password);
+      const existing = db.prepare("select id from users where email=?").get(email);
+      if (existing) {
+        db.prepare("update users set password_hash=?, password_salt=? where email=?").run(pass.hash, pass.salt, email);
+      } else {
+        db.prepare(`
+          insert into users(id, email, display_name, password_hash, password_salt, plan, created_at)
+          values(?, ?, ?, ?, ?, 'plus', ?)
+        `).run(`user-tester-0${i}`, email, `EduVault Tester ${i}`, pass.hash, pass.salt, createdAt);
+      }
     }
-    const adminSalt = randomBytes(16).toString("hex");
-    const adminHash = (await scrypt(password, adminSalt, 32)).toString("hex");
-    db.prepare(`
-      insert or ignore into users(id, email, display_name, password_hash, password_salt, plan, created_at)
-      values('user-admin', 'admin@eduvault.local', 'EduVault Admin', ?, ?, 'plus', ?)
-    `).run(adminHash, adminSalt, createdAt);
+    const adminEmail = "admin@eduvault.local";
+    const adminPass = await passwordHash(password);
+    const existingAdmin = db.prepare("select id from users where email=?").get(adminEmail);
+    if (existingAdmin) {
+      db.prepare("update users set password_hash=?, password_salt=? where email=?").run(adminPass.hash, adminPass.salt, adminEmail);
+    } else {
+      db.prepare(`
+        insert into users(id, email, display_name, password_hash, password_salt, plan, created_at)
+        values('user-admin', ?, 'EduVault Admin', ?, ?, 'plus', ?)
+      `).run(adminEmail, adminPass.hash, adminPass.salt, createdAt);
+    }
   } catch (err) {
     console.error("[db] Seed default users failed:", err);
   }
