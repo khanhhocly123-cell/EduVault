@@ -64,9 +64,9 @@ function requireOcrQuota(user){
  *
  * Trước đây đường dẫn MiKTeX của một máy cụ thể bị hard-code làm mặc định, nên
  * mọi máy khác (và container Linux trên Render) đều chết với ENOENT. Nay thứ tự
- * là: PDFLATEX_PATH nếu được đặt → `pdflatex` trong PATH → các vị trí cài đặt
- * quen thuộc trên Windows. Ứng viên nào ENOENT thì thử tiếp ứng viên sau, và
- * cái nào chạy được sẽ được nhớ lại cho những lần biên dịch sau.
+ * là: PDFLATEX_PATH nếu nó thật sự tồn tại → `pdflatex` trong PATH → các vị trí
+ * cài đặt quen thuộc trên Windows. Ứng viên nào ENOENT thì thử tiếp ứng viên
+ * sau, và cái nào chạy được sẽ được nhớ lại cho những lần biên dịch sau.
  */
 const LATEX_EXE = process.platform === "win32" ? "pdflatex.exe" : "pdflatex";
 function windowsLatexCandidates(){
@@ -81,9 +81,12 @@ function windowsLatexCandidates(){
   return paths;
 }
 function pdfLatexCandidates(){
+  const paths=[];
+  // PDFLATEX_PATH được ưu tiên, nhưng chỉ khi nó còn tồn tại: một biến môi
+  // trường cũ trỏ tới máy khác không được phép khoá cứng cả tính năng.
   const configured=(process.env.PDFLATEX_PATH||"").trim();
-  if(configured)return [configured];
-  const paths=["pdflatex"];
+  if(configured&&(!/[\\/]/.test(configured)||existsSync(configured)))paths.push(configured);
+  paths.push("pdflatex");
   if(process.platform==="win32")paths.push(...windowsLatexCandidates().filter(path=>existsSync(path)));
   else for(const path of ["/usr/bin/pdflatex","/usr/local/bin/pdflatex"])if(existsSync(path))paths.push(path);
   return paths;
@@ -109,6 +112,7 @@ function runPdfLatex(cwd){
     for(const command of candidates){
       try{
         const output=await spawnPdfLatex(command,cwd);
+        if(resolvedPdfLatex!==command)console.log(`[latex] dùng ${command}`);
         resolvedPdfLatex=command;
         return output;
       }catch(error){
