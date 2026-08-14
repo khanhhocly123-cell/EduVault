@@ -337,7 +337,7 @@ CÂU HỎI NHÓM — MỘT CỤM DỮ LIỆU DÙNG CHUNG CHO NHIỀU CÂU
 - Trang không có câu hỏi nhóm thì "groups" là mảng rỗng.
 
 PHÂN LOẠI DẠNG CÂU
-- MC: trắc nghiệm chọn một phương án. Số phương án LẤY ĐÚNG NHƯ TRÊN ĐỀ — đề phổ thông thường 4 (A–D), đề đại học có thể 5 (A–E, hay có phương án "Các câu khác sai"). Chép đủ, "label" ghi đúng chữ cái in trên đề.
+- MC: trắc nghiệm chọn một phương án. BẮT BUỘC trích xuất ĐỦ các phương án in trên đề (thường là 4 phương án A, B, C, D; hoặc 5 phương án A–E). Mỗi phương án LÀ MỘT phần tử riêng trong mảng "mc_choices" với "label" (chữ cái A, B, C, D...) và "text_latex" tương ứng. KHÔNG ĐƯỢC gộp nội dung các phương án A, B, C, D vào thân câu hỏi ("stem_latex").
 - TF: câu đúng/sai — một dẫn đề chung kèm các ý a/b/c/d, mỗi ý có đúng/sai riêng. Không nhầm với MC.
 - SHORT: trả lời ngắn, đáp án là một con số. "value" ghi dạng chuỗi, giữ nguyên dấu phẩy thập phân.
 - ESSAY: tự luận.
