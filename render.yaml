@@ -1,10 +1,8 @@
 services:
   - type: web
     name: eduvault-app
-    env: node
-    rootDir: web
-    buildCommand: npm install
-    startCommand: node server.mjs
+    env: docker
+    dockerfilePath: Dockerfile
     envVars:
       - key: NODE_ENV
         value: production
