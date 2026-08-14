@@ -25,15 +25,18 @@
     <button type="button" data-go="home" aria-current="page">Trang chính</button>
     <button type="button" data-go="kho">Kho câu hỏi</button>
     <button type="button" data-go="rap">Ráp đề</button>
+    <button type="button" data-go="custom">Tùy chỉnh</button>
     <button type="button" data-go="duyet">Duyệt<span class="badge" id="pendCount">0</span></button>
     <button type="button" data-go="nguon">Tài liệu</button>
   </nav>
 
   <div class="grow"></div>
 
-  <div class="seg" role="group" aria-label="Môn đang làm việc">
-    <button type="button" data-subj="physics" aria-pressed="true">Vật lí</button>
-    <button type="button" data-subj="math" aria-pressed="false">Toán</button>
+  <div class="vault-switcher" aria-label="Kho đang làm việc">
+    <span>Kho</span>
+    <select id="vaultSelect" aria-label="Chọn Kho"></select>
+    <button class="vault-action" id="vaultRename" type="button" title="Đổi tên Kho" aria-label="Đổi tên Kho">✎</button>
+    <button class="vault-action add" id="vaultCreate" type="button" title="Tạo Kho mới" aria-label="Tạo Kho mới">+</button>
   </div>
 
   <div class="quota" title="Lượt quét còn lại trong tháng này">
@@ -146,6 +149,8 @@
       </label>
       <span class="num" id="count" style="font-size:13.5px;color:var(--ink-3);white-space:nowrap"></span>
       <button class="btn btn-sm" type="button" id="btnSort">Sắp xếp: mới nhất</button>
+      <button class="btn btn-sm" type="button" id="btnCheckAll">Chọn hết</button>
+      <button class="btn btn-sm btn-danger" type="button" id="btnDelSelMany" hidden>Xoá câu đã chọn</button>
       <button class="btn btn-sm btn-primary" type="button" id="btnAddSel">+ Thêm vào đề</button>
     </div>
     <div class="scroll" id="list"></div>
@@ -176,10 +181,16 @@
         <button class="btn btn-sm" type="button" id="btnResolve">Rút lại câu ngẫu nhiên</button>
         <button class="btn btn-sm" type="button" id="btnShuffle">Trộn 4 mã đề</button>
         <button class="btn btn-sm" type="button" id="btnLayout">Trình bày</button>
-        <button class="btn btn-sm" type="button" id="btnFoldAll" title="Thu gọn hoặc mở hết các phần">Thu gọn</button>
-        <button class="btn btn-sm" type="button" id="btnClear">Xoá hết</button>
-        <button class="btn btn-sm" type="button" id="btnExportJson" title="Cho ai muốn chạy tiếp bằng CLI phase0">JSON</button>
+        <details class="tool-more">
+          <summary class="btn btn-sm" title="Tác vụ ít dùng">Thêm ···</summary>
+          <div class="tool-more-menu">
+            <button type="button" id="btnFoldAll">Thu gọn các phần</button>
+            <button type="button" id="btnExportJson">Tải dữ liệu JSON</button>
+            <button type="button" id="btnClear" class="danger">Xoá toàn bộ đề</button>
+          </div>
+        </details>
         <button class="btn btn-sm" type="button" id="btnExportAll">Xuất cả bộ</button>
+        <button class="btn btn-sm" type="button" id="btnExportPdf">Xuất PDF</button>
         <button class="btn btn-sm btn-primary" type="button" id="btnExport">Xuất Word</button>
       </div>
     </div>
@@ -191,6 +202,10 @@
     <div class="scroll outline" id="canvas"></div>
   </div>
 
+  <!-- Kéo để chia lại chỗ giữa cột soạn đề và tờ giấy. Bấm đúp là về mặc định. -->
+  <div class="splitter" id="rapSplit" role="separator" aria-orientation="vertical"
+       tabindex="0" aria-label="Kéo để đổi bề rộng khung xem trước"></div>
+
   <aside class="preview" aria-label="Bản xem trước">
     <div class="bar">
       <div class="seg" role="group" aria-label="Xem đề, đáp án, lời giải hay ma trận">
@@ -200,13 +215,54 @@
         <button type="button" data-sheet="matran" aria-pressed="false">Ma trận</button>
       </div>
       <div class="grow"></div>
+      <!-- "Trình bày của bạn" giữ đủ style/phông/preset và là thứ đi thẳng sang
+           Word. "PDF LaTeX" là bộ dựng riêng, tối giản — nói rõ để không ai
+           tưởng nó là bản đầy đủ. -->
+      <div class="seg" role="group" aria-label="Kiểu xem trước">
+        <button type="button" data-pv="style" aria-pressed="true">Trình bày của bạn</button>
+        <button type="button" data-pv="pdf" aria-pressed="false">PDF LaTeX</button>
+      </div>
+      <div class="zoomtools" role="group" aria-label="Phóng to trang giấy" id="sheetZoomTools">
+        <button class="btn btn-sm btn-ghost" type="button" id="btnSheetOut" aria-label="Thu nhỏ">−</button>
+        <button class="btn btn-sm btn-ghost" type="button" id="btnSheetZoom" title="Bấm để vừa khung">100%</button>
+        <button class="btn btn-sm btn-ghost" type="button" id="btnSheetIn" aria-label="Phóng to">+</button>
+      </div>
       <span class="muted" style="font-size:12.5px" id="pageEst">A4</span>
+      <button class="btn btn-sm btn-ghost" type="button" id="btnPreviewWide"
+              title="Ẩn cột soạn đề để xem tờ giấy đúng cỡ thật">Mở rộng</button>
       <button class="btn btn-sm btn-ghost" type="button" id="btnRefresh">Làm mới</button>
     </div>
-    <div class="body" id="sheetwrap" style="position:relative">
-      <div class="sheet" id="sheet"></div>
+    <div class="body" id="sheetwrap">
+      <div class="sheetscale" id="sheetScale"><div class="sheet" id="sheet"></div></div>
+      <div class="pdfview" id="pdfView" hidden>
+        <div class="pdfnote" id="pdfNote"></div>
+        <iframe id="pdfFrame" title="Bản xem trước PDF" hidden></iframe>
+      </div>
     </div>
   </aside>
+</section>
+
+<!-- ═══════════════════════════════════════════════ TÙY CHỈNH FORMAT ═══ -->
+<section class="screen" id="s-custom" aria-label="Tùy chỉnh format đề">
+  <div class="custom-wrap">
+    <div class="custom-head">
+      <div><span class="cap">Preset trình bày</span><h2>Tùy chỉnh từng dạng câu</h2>
+        <p class="muted">Chọn mẫu nền rồi chỉnh riêng TN, Đúng–Sai, TLN và tự luận. Thay đổi được lưu theo Kho.</p></div>
+      <div class="grow"></div>
+      <button class="btn" type="button" id="customAdvanced">Tùy chỉnh nâng cao</button>
+      <button class="btn btn-primary" type="button" data-go="rap">Xem trong đề đang soạn</button>
+    </div>
+    <div class="preset-gallery" id="builtinPresets"></div>
+    <div class="custom-grid">
+      <div class="custom-controls" id="customControls"></div>
+      <aside class="custom-preview">
+        <div class="custom-preview-head"><span class="cap">Preview trực tiếp đủ 4 dạng</span><span class="chip" id="customActivePreset"></span></div>
+        <!-- Tờ giấy ở đây phải là A4 THẬT rồi thu nhỏ, không phải một tờ bị bóp
+             cho vừa khung: bóp bề ngang là ngắt dòng khác hẳn bản in. -->
+        <div class="custom-paper-wrap"><div class="sheetscale" id="customScale"><div class="sheet" id="customSheet"></div></div></div>
+      </aside>
+    </div>
+  </div>
 </section>
 
 <!-- ═════════════════════════════════════════════════════════ DUYỆT ═══ -->
@@ -226,6 +282,10 @@
     <span class="rvtrack"><i id="rvBar" style="width:0%"></i></span>
     <span class="muted" style="font-size:12.5px;white-space:nowrap" id="rvDone"></span>
     <div class="grow"></div>
+    <!-- Bảng đối chiếu nằm trong popup: nó là việc thỉnh thoảng mới cần (soát cả
+         tài liệu, xoá hàng loạt), không phải thứ chiếm chỗ thường trực trên màn
+         hình duyệt từng câu. -->
+    <button class="btn btn-sm" type="button" id="rvOpenCheck">Soát cả tài liệu<span class="n" id="rvCheckCount"></span></button>
     <span class="keys">
       <kbd>Enter</kbd> duyệt <kbd>E</kbd> sửa <kbd>S</kbd> để sau <kbd>X</kbd> bỏ <kbd>← →</kbd> chuyển
     </span>
@@ -235,8 +295,19 @@
     <div class="scanpane">
       <div class="bar" style="background:none">
         <span class="cap">Ảnh gốc</span>
+        <div class="zoomtools" role="group" aria-label="Phóng to ảnh trang">
+          <button class="btn btn-sm btn-ghost" type="button" id="rvZoomOut" aria-label="Thu nhỏ">−</button>
+          <button class="btn btn-sm btn-ghost" type="button" id="rvZoomLevel" title="Bấm để về vừa khung">100%</button>
+          <button class="btn btn-sm btn-ghost" type="button" id="rvZoomIn" aria-label="Phóng to">+</button>
+        </div>
         <div class="grow"></div>
-        <span class="muted" style="font-size:12.5px">file thật đã lưu riêng trong workspace</span>
+        <div class="region-tools" id="rvRegionTools">
+          <button class="btn btn-sm" type="button" id="rvCropQuestion" title="Vùng crop mới sẽ thay hình hiện tại của câu đang duyệt">Crop &amp; thay hình câu này</button>
+          <button class="btn btn-sm" type="button" id="rvCropGroup" hidden>Crop hình cụm</button>
+          <span class="region-hint" id="rvRegionHint" hidden>Kéo một khung trên ảnh</span>
+          <button class="btn btn-sm btn-primary" type="button" id="rvRegionSave" hidden disabled>Crop vùng này</button>
+          <button class="btn btn-sm btn-ghost" type="button" id="rvRegionCancel" hidden>Huỷ</button>
+        </div>
       </div>
       <div class="scanwrap"><div class="scan" id="rvScan"></div></div>
     </div>
@@ -271,15 +342,16 @@
     </div>
 
     <div class="drop" id="drop" tabindex="0" role="button"
-         aria-label="Chọn hoặc kéo thả tài liệu để nạp">
+         aria-label="Chọn, kéo thả hoặc dán tài liệu để nạp">
       <svg width="34" height="34" viewBox="0 0 256 256" fill="none" stroke="#796cbf"
            stroke-width="14" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M128 168V72M92 108l36-36 36 36"></path>
         <path d="M40 168v24a16 16 0 0 0 16 16h144a16 16 0 0 0 16-16v-24"></path></svg>
-      <b>Kéo file vào đây, hoặc bấm để chọn</b>
-      <span>PDF hoặc ảnh chụp · tối đa 15 MB</span>
-      <input id="sourceFile" type="file" accept="application/pdf,image/png,image/jpeg,image/webp" hidden>
+      <b>Kéo nhiều ảnh vào đây, bấm để chọn hoặc Ctrl+V để dán</b>
+      <span>Một PDF hoặc tối đa 50 ảnh PNG/JPG/WebP · mỗi file tối đa 15 MB</span>
+      <input id="sourceFile" type="file" accept="application/pdf,image/png,image/jpeg,image/webp" multiple hidden>
     </div>
+    <div class="uploadqueue" id="uploadQueue" hidden aria-label="Các file đang chờ nạp"></div>
 
     <div>
       <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px">

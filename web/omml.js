@@ -84,8 +84,12 @@ function cmd(name, toks, st) {
   if (UPRIGHT.has(name)) {
     const was = st.roman;
     st.roman = true;
-    const inner = readArg(toks, st);
+    let inner = readArg(toks, st);
     st.roman = was;
+    if(name === "mathbb"){
+      const bb={C:"ℂ",H:"ℍ",N:"ℕ",P:"ℙ",Q:"ℚ",R:"ℝ",Z:"ℤ"};
+      inner=inner.replace(/(<m:t[^>]*>)(.*?)(<\/m:t>)/g,(_m,a,value,b)=>a+value.replace(/[CHNPQRZ]/g,ch=>bb[ch]||ch)+b);
+    }
     return inner;
   }
 
@@ -236,8 +240,19 @@ function compactRuns(xml) {
 
 /** Một cụm `$...$` → một `<m:oMath>`. */
 export function mathToOmml(src) {
-  const st = { i: 0, roman: false };
-  const body = buildList(tokenize(String(src)), st);
+  const render = value => {
+    const st = { i:0, roman:false };
+    return buildList(tokenize(String(value)),st);
+  };
+  const source=String(src), cases=/\\begin\s*\{cases\}([\s\S]*?)\\end\s*\{cases\}/g;
+  let body="",last=0,match;
+  while((match=cases.exec(source))){
+    body+=render(source.slice(last,match.index));
+    const rows=match[1].split(/\\\\/).filter(row=>row.trim()).map(row=>`<m:mr>${e(render(row.trim()))}</m:mr>`).join("");
+    body+=`<m:d><m:dPr><m:begChr m:val="{"/><m:endChr m:val=""/><m:ctrlPr/></m:dPr>${e(`<m:m>${rows}</m:m>`)}</m:d>`;
+    last=match.index+match[0].length;
+  }
+  body+=render(source.slice(last));
   return `<m:oMath>${compactRuns(body)}</m:oMath>`;
 }
 

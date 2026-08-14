@@ -11,7 +11,8 @@
  *      mắt người, đỏ = phá huỷ. Không dùng màu để trang trí.
  */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+@import url('./fonts/latinmodern-roman.css');
 
 :root{
   /* nền và tấm */
@@ -64,6 +65,7 @@
 }
 
 *{box-sizing:border-box;}
+[hidden]{display:none!important;}
 html,body{height:100%;}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
      font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;
@@ -170,6 +172,15 @@ kbd{border:1px solid var(--line-2);border-radius:5px;padding:1px 6px;font-size:1
 .nav button[aria-current="page"]{color:var(--acc-ink);}
 .nav .badge{font-size:11.5px;background:var(--acc-tint);color:var(--acc-ink);
        border-radius:5px;padding:1px 6px;}
+.vault-switcher{display:flex;align-items:center;gap:6px;padding:3px 4px 3px 9px;
+  border:1px solid var(--line);border-radius:var(--r);background:var(--surface-2);
+  color:var(--ink-4);font-size:11.5px;white-space:nowrap;}
+.vault-switcher select{width:150px;min-height:28px;padding:2px 24px 2px 7px;border:0;
+  background:var(--surface);font-size:13px;color:var(--ink);font-weight:500;}
+.vault-action{display:grid;place-items:center;width:27px;height:27px;padding:0;border:0;
+  border-radius:6px;background:transparent;color:var(--ink-3);font:inherit;font-size:15px;cursor:pointer;}
+.vault-action:hover{background:var(--acc-tint);color:var(--acc-ink);}
+.vault-action.add{background:var(--acc-tint-2);color:var(--acc-deep);font-size:18px;}
 .quota{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-3);}
 .meter{width:56px;height:4px;border-radius:2px;background:var(--line);overflow:hidden;
        display:block;}
@@ -264,7 +275,21 @@ kbd{border:1px solid var(--line-2);border-radius:5px;padding:1px 6px;font-size:1
 .kv>span:nth-child(odd){color:var(--ink-4);}
 
 /* ─────────────────────────────────────────────────────────── ráp đề ── */
-#s-rap{grid-template-columns:minmax(0,1fr) 520px;background:var(--surface);}
+/* Tờ A4 ở cỡ thật rộng 794px. Cột xem trước cũ khoá cứng 520px nên tờ giấy lúc
+   nào cũng phải thu về ~60% — chữ bé, thanh công cụ chen nhau đến mức vỡ thành
+   chữ dọc. Nay mặc định rộng gần đúng khổ giấy và người dùng kéo lại được. */
+#s-rap{--preview-w:clamp(560px,46vw,1040px);
+       grid-template-columns:minmax(360px,1fr) 7px var(--preview-w);background:var(--surface);}
+/* Chế độ xem rộng: giấu cột soạn đề để tờ A4 lên được cỡ thật.
+   Phải khai MỘT cột: `display:none` gỡ cột trái khỏi lưới, nên nếu vẫn khai
+   nhiều cột thì khung xem trước tụt xuống cột đầu và bị bóp còn 0. */
+#s-rap.wide{grid-template-columns:minmax(0,1fr);}
+#s-rap.wide>.col,#s-rap.wide>.splitter{display:none;}
+
+.splitter{position:relative;cursor:col-resize;background:var(--line);
+      border:0;padding:0;touch-action:none;}
+.splitter::before{content:"";position:absolute;inset:0 -5px;}
+.splitter:hover,.splitter:focus-visible,.splitter.dragging{background:var(--acc);outline:0;}
 
 .outline{padding:20px 24px 24px;}
 .tally{font-size:13.5px;font-variant-numeric:tabular-nums;white-space:nowrap;
@@ -272,6 +297,9 @@ kbd{border:1px solid var(--line-2);border-radius:5px;padding:1px 6px;font-size:1
 /* Cụm nút bên phải thanh Ráp đề: hết chỗ thì xuống hàng cả cụm, vẫn dồn phải. */
 .barbtns{display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;
          gap:8px;min-width:0;flex:1 1 auto;}
+.tool-more{position:relative}.tool-more>summary{list-style:none;cursor:pointer}.tool-more>summary::-webkit-details-marker{display:none}
+.tool-more[open]>summary{border-color:var(--acc);color:var(--acc-ink)}.tool-more-menu{position:absolute;right:0;top:calc(100% + 7px);z-index:45;display:grid;min-width:190px;padding:6px;background:var(--surface-2);border:1px solid var(--line);border-radius:9px;box-shadow:0 12px 34px rgba(30,32,45,.18)}
+.tool-more-menu button{border:0;background:transparent;text-align:left;padding:8px 10px;border-radius:6px;color:var(--ink-2);font:500 13px var(--sans);cursor:pointer}.tool-more-menu button:hover{background:var(--surface)}.tool-more-menu button.danger{color:var(--danger)}
 .tally b{font-weight:600;color:var(--warn);}
 .tally.ok b{color:var(--ok);}
 .vline{width:1px;height:18px;background:var(--line);flex:none;}
@@ -319,14 +347,45 @@ kbd{border:1px solid var(--line-2);border-radius:5px;padding:1px 6px;font-size:1
 
 /* ────────────────────────────────────────────────────── bản xem trước ── */
 .preview{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--sunk);}
+/* Thanh công cụ của khung xem trước có nhiều nhóm nút. Không cho co: ép co thì
+   trình duyệt ngắt chữ trong nút và "Trình bày của bạn" tụt xuống bốn dòng. */
+.preview>.bar{flex-wrap:wrap;row-gap:8px;}
+.preview>.bar>*:not(.grow){flex:none;}
+.preview>.bar .seg button,.preview>.bar .btn,.preview>.bar .muted{white-space:nowrap;}
 .preview .body{flex:1 1 auto;min-height:0;overflow:auto;padding:20px;}
+/* Bản xem trước bằng PDF THẬT: chính file pdfLaTeX vừa dựng, xem bằng bộ đọc
+   PDF của trình duyệt. Bản HTML chỉ gần đúng nên không thay được chỗ này. */
+/* KHÔNG neo tuyệt đối: ở bố cục hẹp (≤1080px) `.preview .body` chuyển sang
+   `overflow:visible` và cao theo nội dung, mà nội dung lúc đó chỉ còn khung PDF
+   — neo `inset:0` thì cả hai cùng co về 0 và người dùng thấy một khung trắng. */
+.pdfview{display:flex;flex-direction:column;height:100%;min-height:min(78vh,900px);}
+.pdfview iframe{flex:1 1 auto;width:100%;border:0;border-radius:var(--r);
+      background:#fff;box-shadow:0 6px 22px rgba(41,43,49,.16);min-height:0;}
+.pdfnote{display:flex;align-items:center;gap:9px;padding:8px 12px;margin:0 0 10px;
+      border-radius:var(--r);font-size:12.5px;color:var(--ink-3);background:var(--surface);
+      box-shadow:inset 0 0 0 1px var(--line);flex:none;}
+.pdfnote svg{width:26px;height:22px;flex:none;}
+.pdfnote .stale{color:var(--warn);}
+.pdfnote .fresh{color:var(--ok);}
 .sheet{background:var(--paper);color:var(--paper-ink);border-radius:2px;padding:30px 32px;
        font-family:var(--serif);font-size:13.5px;line-height:1.75;
        box-shadow:0 8px 24px rgba(41,43,49,.20);}
+/* Tờ giấy phải rộng ĐÚNG khổ A4. Để nó co theo khung bên phải thì nó ngắt dòng
+   ở chỗ khác hẳn bản in — xem trước kiểu đó chỉ để ngắm chứ không tin được.
+   Muốn to nhỏ thì phóng bằng `.sheetscale`, không bóp bề ngang trang. */
+.sheet.paper{width:21cm;box-sizing:border-box;}
+.sheetscale{transform-origin:top left;margin:0 auto;}
+/* Vạch đứt mỗi 29,7cm = mép trang A4, để ước lượng chỗ sang trang. */
+.sheet.paper::after{content:"";position:absolute;inset:0;pointer-events:none;
+       background:repeating-linear-gradient(to bottom,transparent 0,transparent calc(29.7cm - 1px),
+       rgba(120,125,140,.5) calc(29.7cm - 1px),rgba(120,125,140,.5) 29.7cm);}
 .sheet .hd2{display:flex;justify-content:space-between;gap:16px;
        border-bottom:1.5px solid var(--paper-ink);padding-bottom:8px;margin-bottom:12px;}
 .sheet .hd1{text-align:center;border-bottom:1.5px solid var(--paper-ink);
        padding-bottom:8px;margin-bottom:12px;}
+.sheet .hd-bk{margin-bottom:22px}.sheet .hd-bk-line{display:flex;justify-content:space-between;gap:18px;
+       border-bottom:1px solid currentColor;padding:0 1px 4px;font-size:.9em}.sheet .hd-bk-title{text-align:center;
+       margin-top:16px}.sheet .hd-bk-title b{font-size:1.32em;letter-spacing:.035em}.sheet .hd-bk-title span{display:block;margin-top:4px}
 .sheet .logo{width:44px;height:44px;border:1.5px solid var(--paper-ink);border-radius:50%;
        display:grid;place-items:center;font-size:10px;text-align:center;flex:none;}
 .sheet b{display:block;}
@@ -344,6 +403,60 @@ kbd{border:1px solid var(--line-2);border-radius:5px;padding:1px 6px;font-size:1
 .sheet table th{background:#eef1f7;font-weight:600;}
 .sheet table td.n{text-align:center;font-variant-numeric:tabular-nums;}
 
+/* ── Form câu hỏi tuỳ biến: đều là HTML thật, không phải ảnh chụp. ── */
+.sheet .qcard{--form:var(--preset-form,#2b7faf);--form-soft:var(--preset-soft,#f2f8fc);--form-border:var(--preset-border,#9fc9df);
+  border:1px solid var(--form-border);border-radius:10px;padding:12px 13px;margin:10px 0 14px;break-inside:avoid;}
+.sheet .qcard-head{display:flex;align-items:center;gap:12px;margin-bottom:6px;color:var(--form);}
+.sheet .qcard-head b{display:inline-block;background:var(--form-soft);padding:4px 8px;border-radius:3px;}
+.sheet .qcard-head em{font-size:.95em}.sheet .qcard-stem{margin-bottom:9px;}
+.sheet .answer-options{display:grid;gap:6px;margin-top:9px}.sheet .answer-option{display:grid;grid-template-columns:28px 1fr auto;
+  align-items:center;gap:8px;border:1px solid #e1ded2;background:#fffdf5;border-radius:8px;padding:6px 9px;}
+.sheet .answer-option>span{display:grid;place-items:center;width:24px;height:24px;border:1.5px solid var(--form);border-radius:50%;color:var(--form);font-family:var(--sans);font-weight:700;}
+.sheet .answer-option.correct{border-color:#27a66f;background:#effaf4;box-shadow:inset 0 0 0 1px #27a66f;}
+.sheet .answer-option.correct>b{display:inline;color:#15945f;font-size:18px}.sheet .no-answer{color:#7a8490;font-style:italic;margin-top:6px;}
+.sheet .tf-form{display:grid;gap:5px;margin-top:10px}.sheet .tf-form-head,.sheet .tf-form-row{display:grid;grid-template-columns:minmax(0,1fr) 58px 58px;gap:5px;align-items:stretch;}
+.sheet .tf-form-head>*{display:grid;place-items:center;background:var(--form);color:#fff;border-radius:7px;padding:5px;font-family:var(--sans);}
+.sheet .tf-form-row>div{background:#fffdf5;border:1px solid #e3dfd3;border-radius:7px;padding:7px 9px}.sheet .tf-form-row>div b{display:inline;color:var(--form);}
+.sheet .tf-box{display:grid;place-items:center;border:1px solid #ddd9cf;border-radius:7px;background:#fffdf8;color:#16945d;font-size:20px;font-weight:700;}
+.sheet .tf-box.checked{border-color:#28a96f;background:#effaf4}.sheet .short-form{display:flex;align-items:center;gap:9px;flex-wrap:wrap;border:1px dashed var(--form-border);padding:9px;border-radius:8px;margin-top:9px;color:var(--form);}
+.sheet .short-form>b{display:inline}.sheet .short-form small{color:var(--paper-ink)}
+.sheet .short-answer-boxes{display:inline-flex;align-items:stretch}.sheet .short-answer-cell{display:grid;place-items:center;min-width:37px;height:38px;border:1px solid var(--form-border);background:#fffdf8;color:var(--form);font:700 17px/1 var(--sans);margin-left:-1px;}
+.sheet .short-answer-cell:first-child{margin-left:0;border-radius:8px 0 0 8px}.sheet .short-answer-cell:last-child{border-radius:0 8px 8px 0}.sheet .short-answer-cell.wide{min-width:132px;border-radius:8px;margin-left:0;}
+.sheet .workarea{border-left:4px solid var(--form);border-radius:8px;background:repeating-linear-gradient(to bottom,#fff 0,#fff 21px,#d8e1e9 22px);margin-top:10px;padding:6px 10px;color:var(--form);break-inside:avoid;}
+.sheet .workarea.blank{border:1px solid var(--preset-border,#b9c2ca);border-left:1px solid var(--preset-border,#b9c2ca);background:#fff;color:var(--paper-ink)}
+.sheet .short-line{margin:9px 0 4px}.sheet .short-line b{display:inline}.sheet .tf-simple{margin:3px 0 3px 14px}.sheet .tf-simple b{display:inline}
+.sheet .choice-correct{background:#effaf4;box-shadow:inset 0 0 0 1px #27a66f;border-radius:4px;padding:1px 4px}
+.sheet .latex-tabular{font-family:"Latin Modern Roman",serif;border:1px solid #111;gap:0}.sheet .mc-tabular>div{padding:4px 7px;border-right:1px solid #111}
+.sheet .mc-tabular>div:last-child{border-right:0}.sheet .tf-form.latex-tabular{gap:0}.sheet .tf-form.latex-tabular .tf-form-head,
+.sheet .tf-form.latex-tabular .tf-form-row{gap:0}.sheet .tf-form.latex-tabular .tf-form-head>*{border-radius:0;background:#fff;color:#111;border-right:1px solid #111;border-bottom:1px solid #111;font-family:"Latin Modern Roman",serif}
+.sheet .tf-form.latex-tabular .tf-form-row>*{border-radius:0;background:#fff;border:0;border-right:1px solid #111;border-bottom:1px solid #111}.sheet .tf-form.latex-tabular .tf-form-row:last-child>*{border-bottom:0}
+/* Ô tròn quanh chữ cái — mặc định của mẫu BK/HCMUT, để học sinh khoanh thẳng
+   lên đề. Vẽ bằng border chứ không dùng ký tự Ⓐ: font Latin Modern không có
+   các ký tự đó nên trình duyệt sẽ nhảy sang font khác và lệch hẳn baseline. */
+.sheet .mc-circle>div{display:flex;align-items:baseline;gap:7px;}
+.sheet .mc-circle b.mccircle{display:inline-flex;align-items:center;justify-content:center;
+      width:1.55em;height:1.55em;flex:none;border:1px solid currentColor;border-radius:50%;
+      font-weight:400;line-height:1;font-size:.94em;}
+.sheet .styled-solution{margin-top:10px;padding:9px 11px;border-radius:8px;background:var(--form-soft);border:1px solid var(--form-border);}.sheet .styled-solution b{display:inline;color:var(--form);}
+/* KHÔNG gán màu cứng cho từng form ở đây. Bảng màu chỉ đi qua ba biến
+   `--preset-form/soft/border` mà `paperStyle()` bơm vào tờ giấy — trước đây ba
+   dòng dưới ghi đè chúng, nên hộp chọn màu trong trình tuỳ biến bấm xong tờ giấy
+   không đổi gì, còn thanh tiêu đề phần thì lại đổi. Mỗi form giờ chỉ khác nhau ở
+   hình khối. */
+.sheet.qstyle-specialist-pink .qcard{border-radius:14px;}
+.sheet.qstyle-specialist-pink .qcard-head b{background:var(--form);color:#fff}
+.sheet.qstyle-specialist-pink .answer-option>span{border-radius:4px;}
+.sheet.qstyle-logic-green .qcard{border-radius:4px;}
+.sheet.qstyle-logic-green .qcard-head b{background:var(--form);color:#fff}
+/* Trong tờ giấy, khối dữ liệu dùng chung ăn theo bảng màu của đề — ngoài tờ giấy
+   (màn Duyệt) nó vẫn giữ màu xanh nhận diện nhóm câu. */
+.sheet .group-context{background:var(--preset-soft,#eef7f2);
+      box-shadow:inset 4px 0 0 var(--preset-form,#287e70),inset 0 0 0 1px var(--preset-border,#a8d4bf);}
+.sheet .group-context .group-title{color:var(--preset-form,#126343);}
+.sheet .section-heading.bar{background:var(--preset-form,#287faf);color:#fff;border-radius:6px;padding:6px 10px;}
+.sheet .section-heading.outline{border:1px solid var(--preset-border,#88bad4);color:var(--preset-form,#287faf);border-radius:6px;padding:5px 9px;}
+.sheet .layout-extra{display:grid;gap:7px;margin:10px 0;text-align:center;break-inside:avoid}.sheet .layout-extra img{display:block;width:100%;max-height:210px;object-fit:contain;margin:auto}.sheet .layout-extra.bottom{margin-top:18px;}
+
 .loading{position:absolute;inset:0;background:var(--sunk);display:grid;place-items:center;}
 .loading p{margin:0;color:var(--ink-3);font-size:13.5px;text-align:center;}
 @keyframes swing{0%,100%{transform:rotate(-26deg);}50%{transform:rotate(26deg);}}
@@ -351,9 +464,8 @@ kbd{border:1px solid var(--line-2);border-radius:5px;padding:1px 6px;font-size:1
 @media (prefers-reduced-motion:reduce){.pend{animation:none;}}
 
 /* ──────────────────────────────────────────────────────────── duyệt ── */
-/* BA hàng, không phải hai: .rv-bar, .rv-bar2 (tiến độ + phím tắt), rồi .rv-grid.
-   Khai thiếu một hàng thì hàng tiến độ bị ép cao 0px và chữ của nó đè lên hai
-   cột bên dưới. */
+/* BA hàng: .rv-bar, .rv-bar2 (tiến độ + phím tắt), rồi .rv-grid. Khai thiếu một
+   hàng thì hàng đó bị ép cao 0px và chữ của nó đè lên phần bên dưới. */
 #s-duyet{grid-template-rows:auto auto minmax(0,1fr);background:var(--surface);}
 .rv-bar{display:flex;align-items:center;gap:14px;padding:10px 20px;
         background:var(--surface);box-shadow:inset 0 -1px 0 var(--line);flex-wrap:wrap;}
@@ -385,10 +497,21 @@ kbd{border:1px solid var(--line-2);border-radius:5px;padding:1px 6px;font-size:1
 .choice.picktf.isT .tagright{color:var(--ok);}
 .choice.picktf.isF .tagright{color:var(--danger);}
 .keys{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-4);}
-.rv-grid{display:grid;grid-template-columns:1fr 1fr;min-height:0;}
+/* `minmax(0,1fr)` chứ không phải `1fr`: mặc định cột lấy min-width là auto, nên
+   khi phóng to ảnh trang thì cả cột phình ra và ĐẨY cột bên phải đi, thay vì để
+   khung ảnh tự cuộn. */
+.rv-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:0;}
 .scanpane{display:flex;flex-direction:column;background:var(--sunk);
         border-right:1px solid var(--line);min-height:0;}
-.scanwrap{flex:1 1 auto;overflow:auto;padding:16px 24px;display:flex;justify-content:center;}
+/* `align-items:flex-start` để ảnh phóng to không bị flex kéo giãn theo chiều cao;
+   `justify-content` đổi sang flex-start khi ảnh rộng hơn khung, nếu không phần
+   mép trái bị đẩy ra ngoài vùng cuộn và không kéo tới được. */
+.scanwrap{flex:1 1 auto;overflow:auto;padding:16px 24px;display:flex;
+      justify-content:safe center;align-items:flex-start;}
+.zoomtools{display:inline-flex;align-items:center;gap:2px;margin-left:10px;
+      border:1px solid var(--line);border-radius:var(--r-sm);padding:1px;}
+.zoomtools button{min-width:32px;padding:2px 6px;font-variant-numeric:tabular-nums;}
+#rvZoomLevel{min-width:52px;font-size:12px;color:var(--ink-3);}
 .scan{position:relative;width:100%;max-width:760px;height:max-content;font-family:var(--serif);
       font-size:13px;line-height:1.85;color:#2a2a28;}
 .scan .ln{opacity:.5;}
@@ -407,10 +530,67 @@ kbd{border:1px solid var(--line-2);border-radius:5px;padding:1px 6px;font-size:1
 .sourcehl{position:absolute;border:3px solid #6d5bd0;background:rgba(109,91,208,.14);
       box-shadow:0 0 0 2px rgba(255,255,255,.8),0 4px 16px rgba(58,42,140,.3);
       border-radius:5px;pointer-events:none;transition:inset .18s ease,left .18s ease,top .18s ease,
-      width .18s ease,height .18s ease;}
+      width .18s ease,height .18s ease;box-sizing:border-box;}
+.sourcehl.group{border-color:#16845b;background:rgba(22,132,91,.1);box-shadow:0 0 0 2px rgba(255,255,255,.75);}
+.sourcehl.group>span{background:#126f4c;}
 .sourcehl>span{position:absolute;left:-3px;top:-24px;background:#5d49c7;color:#fff;
       font-family:var(--sans);font-size:10px;font-weight:700;letter-spacing:.05em;
       text-transform:uppercase;padding:2px 7px;border-radius:4px 4px 4px 0;white-space:nowrap;}
+/* Bảng đối chiếu OCR ↔ trang gốc.
+   Đây là thứ thay cho lớp highlight: đọc lướt cả tài liệu trong một màn hình,
+   bấm một dòng là nhảy sang câu đó và mở đúng trang bên trái. */
+.rv-check{background:var(--surface-2);box-shadow:inset 0 -1px 0 var(--line);}
+.rv-check-head{display:flex;align-items:center;gap:12px;padding:8px 20px;}
+.rvcheck-modal{width:min(1100px,100%);}
+.rv-check-wrap{overflow:auto;}
+.rv-select-bar{display:flex;align-items:center;gap:12px;padding:8px 18px;flex:none;
+      background:var(--acc-tint);box-shadow:inset 0 -1px 0 var(--line);}
+.rv-select-bar .num{font-size:13px;color:var(--acc-ink);font-variant-numeric:tabular-nums;}
+.rvcheckall{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-2);cursor:pointer;}
+.rvtable{width:100%;border-collapse:collapse;background:var(--surface);table-layout:fixed;}
+.rvtable td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top;}
+.rvtable td.pick{width:38px;padding-right:0;padding-left:14px;}
+.rvtable input[type="checkbox"]{width:16px;height:16px;accent-color:var(--acc-600);cursor:pointer;margin:0;}
+.rvrow.picked td{background:var(--acc-tint);}
+.rvrow.picked td.pick{box-shadow:inset 3px 0 0 var(--acc-600);}
+/* Ba cột thôi. Bản đầu có sáu cột, trong đó hai cột gần như lặp lại một chuỗi
+   ("Tự luận", "model đọc không chắc") — nhìn vào chỉ thấy nhiễu chứ không thấy
+   câu nào cần xem.
+   KHÔNG đặt `display:flex` lên `<td>`: ô mất vai trò ô bảng, cột lệch hẳn khỏi
+   hàng và giữa bảng hở một mảng trắng to. Xếp dọc bằng `<b>`/`<i>` block. */
+.rvtable td.who{width:150px;line-height:1.35;}
+.rvtable td.who b{display:block;font-size:13.5px;color:var(--ink);}
+.rvtable td.who i{display:block;font-style:normal;font-size:11.5px;color:var(--ink-4);}
+.rvtable td.stem{font-family:var(--serif);font-size:14.5px;line-height:1.5;color:var(--ink);}
+.rvtable td.page{width:66px;text-align:right;line-height:1.25;}
+.rvtable td.page span{display:block;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-4);}
+.rvtable td.page b{font-size:15px;font-variant-numeric:tabular-nums;color:var(--acc-ink);}
+/* Đầu khối = một BÀI LỚN/cụm, hoặc một trang nếu là câu lẻ. Giáo viên nghĩ theo
+   bài chứ không nghĩ theo trang. */
+.rvpagerow td{background:var(--sunk);font-size:12.5px;font-weight:600;color:var(--ink-2);
+      padding:6px 12px;border-bottom:1px solid var(--line);}
+.rvpagerow td.pick{padding-left:14px;}
+.rvpagerow td span{float:right;font-weight:400;font-size:11.5px;color:var(--ink-4);}
+.rvrow{cursor:pointer;}
+.rvrow:hover td{background:var(--acc-tint);}
+.rvrow.flagged td.who{box-shadow:inset 3px 0 0 var(--warn-line);}
+.rvrow.on td{background:var(--acc-tint);box-shadow:inset 0 0 0 1px var(--acc);}
+.rvrow.on td.who{box-shadow:inset 0 0 0 1px var(--acc),inset 3px 0 0 var(--acc-600);}
+.rvrow:focus-visible{outline:2px solid var(--acc-600);outline-offset:-2px;}
+.rvchips{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;}
+.rvtag{font-family:var(--sans);font-size:11px;color:var(--ink-4);background:var(--surface-2);
+      border-radius:4px;padding:2px 7px;box-shadow:inset 0 0 0 1px var(--line);white-space:nowrap;}
+.rvtag.ok{color:var(--ok);background:var(--ok-soft);box-shadow:none;}
+.rvtag.warn{color:var(--warn);background:var(--warn-soft);box-shadow:inset 0 0 0 1px var(--warn-line);}
+
+.sourcepage.selecting{cursor:crosshair;touch-action:none;user-select:none;}
+.region-selection{position:absolute;border:2px solid #d0542d;background:rgba(255,151,77,.17);
+      box-shadow:0 0 0 9999px rgba(16,20,18,.17);pointer-events:none;box-sizing:border-box;z-index:4;}
+.region-selection>span{position:absolute;left:-2px;top:-23px;background:#b64220;color:#fff;
+      font-family:var(--sans);font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px 4px 4px 0;
+      white-space:nowrap;}
+.region-tools{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap;}
+.region-hint{font-size:11.5px;color:var(--warn);white-space:nowrap;}
 .sourcehint{font-family:var(--sans);font-size:12px;color:var(--warn);padding:9px 0;}
 .autocrop{display:grid;grid-template-columns:minmax(0,1fr) minmax(120px,220px);gap:14px;
       align-items:center;padding:10px 12px;border-radius:var(--r);background:var(--acc-tint);
@@ -418,6 +598,10 @@ kbd{border:1px solid var(--line-2);border-radius:5px;padding:1px 6px;font-size:1
 .autocrop>div:first-child{display:flex;flex-direction:column;gap:3px;color:var(--acc-ink);font-size:13px;}
 .autocrop-img{background:#fff;padding:6px;border-radius:var(--r-sm);box-shadow:0 0 0 1px var(--line);}
 .autocrop-img img{display:block;width:100%;height:auto;}
+.group-context{display:flex;flex-direction:column;gap:7px;padding:11px 13px;border-radius:var(--r);
+      background:#eef7f2;box-shadow:inset 0 0 0 1px #a8d4bf;}
+.group-context .group-title{display:flex;align-items:center;gap:7px;color:#126343;font-size:12px;font-weight:700;}
+.group-members{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}.group-members .chip{max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .rvform{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--surface);}
 .rvbody{flex:1 1 auto;min-height:0;overflow:auto;padding:4px 16px 16px;
         display:flex;flex-direction:column;gap:14px;}
@@ -441,6 +625,16 @@ kbd{border:1px solid var(--line-2);border-radius:5px;padding:1px 6px;font-size:1
 .drop b{font-size:17px;font-weight:500;}
 .drop span{font-size:13.5px;color:var(--ink-3);}
 .drop.hot{border-color:var(--acc);background:var(--acc-tint);}
+.drop.pasted{border-color:var(--ok);background:var(--ok-soft);}
+.uploadqueue{display:flex;flex-wrap:wrap;gap:7px;margin-top:-10px;}
+.uploadfile{display:flex;align-items:center;gap:7px;max-width:100%;padding:6px 8px 6px 10px;
+      border-radius:999px;background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--line);
+      font-size:12px;color:var(--ink-2);}
+.uploadfile .nm{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.uploadfile .sz{color:var(--ink-4);font-variant-numeric:tabular-nums;}
+.uploadfile button{border:0;background:transparent;color:var(--ink-4);cursor:pointer;padding:0 2px;
+      font:inherit;line-height:1;}
+.uploadfile button:hover{color:var(--danger);}
 
 .table{width:100%;border-collapse:collapse;font-size:14px;}
 .table th{text-align:left;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;
@@ -526,6 +720,34 @@ kbd{border:1px solid var(--line-2);border-radius:5px;padding:1px 6px;font-size:1
   .tiles{grid-template-columns:1fr 1fr;}
   .homegrid{grid-template-columns:1fr;}
 }
+
+/* ─────────────────────────────────────── màn tùy chỉnh format ── */
+#s-custom{background:var(--surface);overflow:auto}#s-custom.on{display:block}
+.custom-wrap{max-width:1380px;margin:0 auto;padding:24px 26px 48px}.custom-head{display:flex;align-items:center;
+      gap:12px;flex-wrap:wrap;margin-bottom:18px}.custom-head h2{font-size:27px;margin-top:3px}.custom-head p{margin:5px 0 0;font-size:13.5px}
+.preset-gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}.preset-card{display:flex;
+      flex-direction:column;gap:7px;text-align:left;padding:15px 16px;border:1px solid var(--line);border-radius:var(--r);
+      background:var(--surface-2);font:inherit;color:var(--ink);cursor:pointer}.preset-card:hover{border-color:var(--acc);background:var(--acc-tint)}
+.preset-card[aria-pressed="true"]{border-color:var(--acc);box-shadow:inset 3px 0 0 var(--acc-600);background:var(--acc-tint)}
+.preset-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px}.preset-card-top b{font-size:17px}
+.preset-card>span:nth-child(2){font-size:13px;color:var(--ink-3);line-height:1.5}.preset-card small{font-size:11.5px;color:var(--ink-4)}
+.custom-grid{display:grid;grid-template-columns:minmax(420px,560px) minmax(520px,1fr);gap:16px;align-items:start}.custom-controls{display:grid;gap:10px}
+.custom-control-card{border:1px solid var(--line);border-radius:var(--r);background:var(--surface-2);padding:13px 14px;display:grid;gap:11px}
+.custom-control-title{display:flex;align-items:center;gap:10px}.custom-control-title>div{display:flex;flex-direction:column}.custom-control-title b{font-size:14px}
+.custom-control-title small{font-size:11.5px;color:var(--ink-4)}.custom-type-icon{width:32px;height:32px;border-radius:7px;display:grid;
+      place-items:center;background:var(--line);color:var(--ink-2);font-size:12px;font-weight:700}.custom-type-icon.mc{background:var(--t-mc-bg);color:var(--t-mc-ink)}
+.custom-type-icon.tf{background:var(--t-tf-bg);color:var(--t-tf-ink)}.custom-type-icon.short{background:var(--t-short-bg);color:var(--t-short-ink)}
+.custom-type-icon.essay{background:var(--t-essay-bg);color:var(--t-essay-ink)}.custom-control-card label{font-size:11.5px;color:var(--ink-3)}
+.margin-four{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.custom-preview{border:1px solid var(--line);border-radius:var(--r);
+      overflow:hidden;background:var(--sunk);position:sticky;top:68px}.custom-preview-head{display:flex;align-items:center;justify-content:space-between;
+      gap:8px;padding:10px 12px;background:var(--surface);border-bottom:1px solid var(--line)}.custom-paper-wrap{padding:18px;max-height:calc(100vh - 160px);overflow:auto}
+/* KHÔNG ép `width:100%` và `font-size:10.5pt` lên tờ giấy ở đây. Bản trước làm
+   thế nên màn Tùy chỉnh vẽ một tờ hẹp hơn A4 với cỡ chữ khác cỡ đã chọn — xem
+   một đằng, tải về một nẻo. Nay giữ nguyên khổ 21cm rồi thu bằng transform. */
+.custom-paper-wrap>.sheetscale>.sheet{min-height:720px;box-shadow:0 6px 22px rgba(41,43,49,.18)}
+
+@media(max-width:1050px){.custom-grid{grid-template-columns:1fr}.custom-preview{position:static}.custom-paper-wrap{max-height:none}}
+@media(max-width:700px){.preset-gallery{grid-template-columns:1fr}.custom-wrap{padding:18px 14px}.margin-four{grid-template-columns:1fr 1fr}}
 
 /* ─────────────────────────────── trình sửa câu: tab ── */
 .edtabs{display:flex;gap:2px;background:var(--surface-2);border-radius:var(--r);padding:3px;}
@@ -684,6 +906,7 @@ input[type=range]{width:100%;accent-color:var(--acc-600);height:22px;padding:0;
        border-radius:var(--r-lg);background:var(--surface);overflow:hidden;
        box-shadow:0 0 0 1px var(--line-2),0 16px 40px rgba(41,43,49,.28);}
 .modal.narrow{width:min(640px,100%);}
+.modal.preset-modal{width:min(1180px,100%);}
 .modal-head{display:flex;align-items:center;gap:12px;padding:14px 18px;flex:none;
        background:var(--fade) no-repeat bottom/100% 1px;}
 .modal-head h3{font-size:20px;}
@@ -697,6 +920,13 @@ input[type=range]{width:100%;accent-color:var(--acc-600);height:22px;padding:0;
        background:var(--fade) no-repeat top/100% 1px;}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.preset-panel{padding:12px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface-2);}
+.reference-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.reference-row img{width:96px;height:72px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:var(--r-sm)}
+.reference-empty{display:grid;place-items:center;width:96px;height:72px;border:1px dashed var(--line-2);border-radius:var(--r-sm);font-size:11px;color:var(--ink-4);text-align:center;padding:6px;}
+.color-grid label{display:grid;gap:5px;font-size:12px;color:var(--ink-3)}.color-grid input[type=color]{width:100%;min-height:36px;padding:3px;}
+.compact-field{display:grid;grid-template-columns:42px 1fr;gap:7px;align-items:center}.compact-field>span{font-size:12px;color:var(--ink-3)}
+.logoprev.wide{display:inline-grid;width:88px;height:54px;margin-right:8px;vertical-align:middle;}
+.preset-modal #lyPrev>.sheet{transform-origin:top left}.preset-modal .ed-right{overflow:auto}.preset-modal .ed-left>div{display:grid;gap:8px;}
 .optline{display:grid;grid-template-columns:auto auto 1fr;gap:9px;align-items:center;
        margin-bottom:6px;}
 .optline .pick{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--line-2);
@@ -727,6 +957,7 @@ input[type=range]{width:100%;accent-color:var(--acc-600);height:22px;padding:0;
 .mth{font-family:var(--serif);font-style:normal;}
 .mth i{font-style:italic;}
 .mth .up,.mth .fn{font-style:normal;}
+.mth .bb{font-family:"Cambria Math","STIX Two Text",serif;font-style:normal;}
 .mth .rel{margin:0 .24em;}
 .mth .bin{margin:0 .17em;}
 .mth .una{margin:0;}
@@ -747,21 +978,38 @@ input[type=range]{width:100%;accent-color:var(--acc-600);height:22px;padding:0;
 .mth .vec::before{content:"→";}
 .mth .hat::before{content:"^";top:-.16em;}
 .mth .tld::before{content:"~";top:-.2em;}
+/* Phân số phải nằm ĐÚNG trên trục toán: gạch ngang của nó ngang tầm dấu trừ,
+   tức là khoảng nửa chiều cao chữ x phía trên đường chân chữ.
+   `vertical-align:middle` cho đúng chỗ đó vì gạch ngang nằm giữa hộp hai dòng.
+   Bản trước dùng `vertical-align:-.55em` nên cả phân số bị dìm hẳn xuống dưới
+   dòng chữ — nhìn như bị rơi ra khỏi câu. */
 .fr{display:inline-flex;flex-direction:column;text-align:center;
-    vertical-align:-.55em;font-size:.86em;}
-.fr>span:first-child{border-bottom:1px solid currentColor;padding:0 .25em;}
+    vertical-align:middle;font-size:.86em;line-height:1.18;}
+.fr>span{padding:0 .2em;}
+.fr>span:first-child{border-bottom:1px solid currentColor;padding-bottom:.06em;}
+.fr>span:last-child{padding-top:.06em;}
+/* Phân số NẰM TRONG số mũ/chỉ số thì viết dạng gạch chéo a/b.
+   Phân số xếp chồng là inline-flex, mà sup/sub lại đặt line-height:0 để khỏi
+   giãn dòng — hai thứ đó gặp nhau thì cả phân số co lại thành một chấm.
+   Thấy đúng lỗi này ở $e^{-\dfrac{a}{\lambda_L}}$ của đề độ thâm nhập London. */
+.mth sup .fr,.mth sub .fr{display:inline;vertical-align:baseline;font-size:1em;}
+.mth sup .fr>span:first-child,.mth sub .fr>span:first-child{border-bottom:0;padding:0;}
+.mth sup .fr>span:first-child::after,.mth sub .fr>span:first-child::after{content:"/";margin:0 .05em;}
 .rd>span{border-top:1px solid currentColor;padding:0 .15em;}
 .rd .idx{font-size:.6em;vertical-align:.5em;margin-right:-.28em;}
+.mth .cases{display:inline-grid;grid-template-columns:auto 1fr;align-items:center;vertical-align:middle;margin:0 .12em}.mth .cases::before{content:"{";font-size:2.25em;line-height:.8;grid-row:1/span 20}.mth .cases>span{display:block;line-height:1.28;padding-left:.15em;white-space:nowrap}
 
 /* ─────────────────────────────────────────────────────────── co hẹp ── */
 @media (max-width:1240px){
   #s-kho{grid-template-columns:190px minmax(0,1fr) 340px;}
-  #s-rap{grid-template-columns:minmax(0,1fr) 430px;}
+  #s-rap{--preview-w:clamp(430px,52vw,700px);grid-template-columns:minmax(260px,1fr) 7px var(--preview-w);}
 }
 @media (max-width:1080px){
   body{display:block;}
   .screen.on{display:block;}
   #s-kho,#s-rap,#s-nguon,#s-duyet,.rv-grid{grid-template-columns:1fr;}
+  /* Một cột thì không còn gì để chia — thanh kéo chỉ thành một vạch thừa. */
+  .splitter{display:none;}
   .facets,.col.bordered,.upcol,.scanpane{border-right:0;
        box-shadow:inset 0 -1px 0 var(--line);}
   .scroll,.preview .body,.rvbody{overflow:visible;}

@@ -16,6 +16,9 @@
 phase1/data/
 phase0/out/
 web/data/
+web/data-beta/
+web/tools/
+TAI-KHOAN-TESTER.md
 out/
 tmp/
 *.log

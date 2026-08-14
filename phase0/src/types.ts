@@ -18,7 +18,8 @@ export const McChoice = z.object({
 export const TfStatement = z.object({
   idx: z.enum(["a", "b", "c", "d"]),
   text_latex: z.string(),
-  is_true: z.boolean(),
+  /** null khi tài liệu không in đáp án; model tuyệt đối không tự suy luận. */
+  is_true: z.boolean().nullable(),
 });
 
 export const ShortAnswer = z.object({
@@ -62,24 +63,47 @@ export const ImageRef = z.object({
 });
 
 /**
- * Đáp án ở đâu ra. Đề THPT phát cho học sinh thì KHÔNG in đáp án — mà giáo viên
- * lưu câu vào kho là để dùng lại, câu không đáp án gần như vô dụng.
- *
- * Nên cho model tự giải, nhưng phải khai báo thẳng là mình tự giải. Nhập nhèm
- * hai loại này lại là hỏng: đáp án chép từ đề thì tin được, đáp án model tự
- * giải thì phải có mắt người xem lại — nhất là câu vận dụng cao.
+ * Cụm dữ liệu dùng chung cho nhiều câu độc lập (đọc hiểu, bảng số liệu, biểu đồ...).
+ * `ref` chỉ cần duy nhất trong một trang; pipeline sẽ gắn thêm source/page để thành id
+ * bền vững trong kho. Tách cụm khỏi Question để không nhân bản một đoạn dẫn dài 2–3 lần.
  */
+export const QuestionGroup = z.object({
+  ref: z.string(),
+  label: z.string().nullable(),
+  stem_latex: z.string(),
+  bbox: z.array(z.number()),
+  images: z.array(ImageRef),
+  /** Số câu in trên đề, dùng để nối cụm dữ liệu với câu con ở trang kế tiếp. */
+  question_numbers: z.array(z.string()),
+});
+
+/** Nguồn đáp án. Pipeline OCR chỉ được trả "printed" hoặc "none"; "manual"
+ * được app gắn sau khi giáo viên chủ động nhập/chỉnh. Không có nhánh AI tự giải. */
 export const AnswerSource = z.enum([
   "printed", // tài liệu có in đáp án, chỉ việc chép
-  "solved", // model tự giải ra — PHẢI cho giáo viên duyệt
-  "none", // không có đáp án và model cũng không chắc
+  "manual", // giáo viên nhập/chỉnh trong app sau OCR
+  "none", // tài liệu không in đáp án; model không được tự giải
 ]);
+
+/** Một đáp án được IN SẴN trên trang, kể cả bảng đáp án đứng riêng cuối tài liệu. */
+export const PrintedAnswer = z.object({
+  type: QuestionType,
+  question_number: z.string(),
+  mc_correct: z.enum(["A", "B", "C", "D"]).nullable(),
+  tf_correct: z.array(z.boolean()).nullable(),
+  short_answer: ShortAnswer.nullable(),
+  solution_latex: z.string().nullable(),
+});
 
 export const Question = z.object({
   type: QuestionType,
+  /** Số/ký hiệu câu đúng như bản in, ví dụ "60", "1" hoặc "2.3". */
+  printed_number: z.string().nullable(),
   stem_latex: z.string(),
   /** Vùng bao trọn câu trên trang gốc, chuẩn hoá 0-1: [x0, y0, x1, y1]. */
   bbox: z.array(z.number()),
+  /** null nếu đứng độc lập; nếu có phải khớp `groups[].ref` trên cùng trang. */
+  group_ref: z.string().nullable(),
   images: z.array(ImageRef),
   mc_choices: z.array(McChoice).nullable(),
   mc_correct: z.enum(["A", "B", "C", "D"]).nullable(),
@@ -95,7 +119,10 @@ export const Question = z.object({
 
 export const PageExtraction = z.object({
   page: z.number().int(),
+  groups: z.array(QuestionGroup),
   questions: z.array(Question),
+  /** Chỉ chứa đáp án/lời giải nhìn thấy trên trang; không chứa kết quả tự giải. */
+  printed_answers: z.array(PrintedAnswer),
 });
 
 export type TQuestion = z.infer<typeof Question>;
@@ -147,7 +174,7 @@ export function validateQuestion(q: TQuestion, index: number): string[] {
   const at = `câu ${index + 1} (${q.type})`;
   const errs: string[] = [];
 
-  const validBox = (box: number[]) => box.length === 4 && box.every((n) => Number.isFinite(n) && n >= 0 && n <= 1)
+  const validBox = (box: unknown) => Array.isArray(box) && box.length === 4 && box.every((n) => Number.isFinite(n) && n >= 0 && n <= 1)
     && box[2]! > box[0]! && box[3]! > box[1]!;
   if (!validBox(q.bbox)) errs.push(`${at}: bbox câu phải là [x0,y0,x1,y1] chuẩn hoá 0-1 và có diện tích dương`);
   q.images.forEach((image) => {
@@ -165,6 +192,8 @@ export function validateQuestion(q: TQuestion, index: number): string[] {
   if (q.type === "TF") {
     if (!q.tf_statements || q.tf_statements.length !== 4)
       errs.push(`${at}: cần đúng 4 ý đúng/sai, nhận được ${q.tf_statements?.length ?? 0}`);
+    if (q.answer_source === "none" && q.tf_statements?.some((s) => s.is_true !== null))
+      errs.push(`${at}: tài liệu không in đáp án nhưng vẫn gán đúng/sai`);
   }
 
   if (q.type === "SHORT" && !q.short_answer && q.answer_source !== "none") {
@@ -186,5 +215,35 @@ export function validateQuestion(q: TQuestion, index: number): string[] {
     if (!slotsInStem.includes(s)) errs.push(`${at}: khai báo hình slot ${s} nhưng thân câu không chèn [[IMG:${s}]]`);
   }
 
+  return errs;
+}
+
+/** Ràng buộc liên kết giữa group và các câu con, không biểu diễn hết được bằng JSON Schema. */
+export function validateQuestionGroups(page: TPageExtraction): string[] {
+  const errs: string[] = [];
+  const validBox = (box: unknown) => Array.isArray(box) && box.length === 4 && box.every((n) => Number.isFinite(n) && n >= 0 && n <= 1)
+    && box[2]! > box[0]! && box[3]! > box[1]!;
+  const refs = new Set<string>();
+  for (const group of page.groups ?? []) {
+    if (!group.ref.trim()) errs.push("group có ref rỗng");
+    if (refs.has(group.ref)) errs.push(`group_ref "${group.ref}" bị lặp trong trang`);
+    refs.add(group.ref);
+    if (!validBox(group.bbox)) errs.push(`group "${group.ref}": bbox không hợp lệ`);
+    group.images.forEach((image) => {
+      if (!validBox(image.bbox)) errs.push(`group "${group.ref}": bbox hình slot ${image.slot} không hợp lệ`);
+    });
+  }
+  const counts = new Map<string, number>();
+  page.questions.forEach((q, i) => {
+    if (q.group_ref == null) return;
+    if (!refs.has(q.group_ref)) errs.push(`câu ${i + 1}: group_ref "${q.group_ref}" không tồn tại`);
+    counts.set(q.group_ref, (counts.get(q.group_ref) ?? 0) + 1);
+  });
+  for (const ref of refs) {
+    const count = counts.get(ref) ?? 0;
+    const declared = page.groups.find((group) => group.ref === ref)?.question_numbers.length ?? 0;
+    if (Math.max(count, declared) < 2)
+      errs.push(`group "${ref}" chỉ có ${Math.max(count, declared)} câu con/số câu; cần ít nhất 2`);
+  }
   return errs;
 }

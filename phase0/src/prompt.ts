@@ -13,12 +13,13 @@ const COMMON_RULES = `NGUYÊN TẮC CỐT LÕI — CHÉP, KHÔNG SÁNG TÁC
 - Chỗ nào mờ không đọc chắc chắn được thì để trống và ghi rõ vào "notes". Tuyệt đối không đoán số.
 - "difficulty" và "topic_code" là phỏng đoán của bạn — cứ đoán, đừng bỏ trống, giáo viên sẽ sửa.
 
-ĐÁP ÁN — PHẢI KHAI RÕ Ở ĐÂU RA ("answer_source")
-Đề phát cho học sinh thường không in đáp án, nhưng câu không đáp án thì giáo viên lưu vào kho cũng chẳng dùng được. Nên: cứ giải, nhưng khai thật.
-- "printed": tài liệu CÓ in đáp án (bảng đáp án cuối đề, chữ đậm, khoanh tròn, phần lời giải kèm theo). Bạn chỉ chép lại. Không được tự giải rồi khai printed.
-- "solved": tài liệu không in, BẠN TỰ GIẢI ra. Cứ giải câu nào chắc chắn. Với câu đúng/sai thì xét từng ý một.
-- "none": không in mà bạn cũng không giải chắc được (thiếu dữ kiện, hình mờ, vượt quá mức chắc chắn). Để đáp án trống và ghi lý do vào "notes". Thà bỏ trống còn hơn đoán bừa — giáo viên phát đề sai cho cả lớp thì hỏng chuyện.
-- Đừng chọn "solved" cho có. Sai một đáp án ở kho thì nó sai trong mọi đề dùng lại câu đó.
+ĐÁP ÁN — CHỈ CHÉP PHẦN ĐƯỢC IN, TUYỆT ĐỐI KHÔNG TỰ GIẢI
+- Nếu tài liệu CÓ in đáp án/lời giải (bảng đáp án cuối đề, chữ đậm, khoanh tròn hoặc phần lời giải), chép đúng phần nhìn thấy và đặt "answer_source" = "printed".
+- Nếu tài liệu KHÔNG in đáp án của câu, đặt "answer_source" = "none", "mc_correct" = null, "short_answer" = null, "solution_latex" = null; với TF mọi "is_true" đều là null.
+- KHÔNG tính toán, KHÔNG suy luận và KHÔNG chọn phương án dù bạn biết cách giải. Mục tiêu là OCR tài liệu, không phải làm bài.
+- Nếu trang là bảng đáp án hoặc phần lời giải đứng riêng, trích từng mục vào "printed_answers" bằng đúng "type" + "question_number" để hệ thống ghép sang câu ở trang khác.
+- Một đáp án chỉ được gắn khi số câu và dạng câu khớp. Không chắc số câu/dạng câu thì bỏ qua, không đoán.
+- Trang không có đáp án/lời giải in sẵn thì "printed_answers" là mảng rỗng.
 
 QUY ƯỚC LATEX (bắt buộc, bộ render phía sau phụ thuộc vào đúng các quy ước này)
 - Toán học bọc trong $...$, không dùng \\( \\).
@@ -30,16 +31,28 @@ QUY ƯỚC LATEX (bắt buộc, bộ render phía sau phụ thuộc vào đúng 
 HÌNH VẼ — ĐỌC KĨ, ĐÂY LÀ CHỖ HAY LÀM SAI
 Câu nào có hình thì phải khai báo, vì app sẽ hiện nhãn "Có hình" cho giáo viên vào chỉnh lại.
 - Mỗi câu luôn phải có "bbox" = [x0, y0, x1, y1] chuẩn hoá 0-1 theo khổ trang, bao trọn từ đầu câu đến hết phương án/ý trả lời. App dùng vùng này để highlight đúng câu trên ảnh gốc. Không gộp vùng của câu kế tiếp.
+- Tọa độ phải đo trên TOÀN BỘ ảnh được gửi vào, tính cả tiêu đề, lề trắng và chân trang; tuyệt đối không lấy vùng nội dung làm một hệ 0-1 riêng. y=0 là mép trên thật của ảnh, y=1 là mép dưới thật của ảnh.
+- Trước khi trả kết quả, kiểm tra các bbox theo thứ tự đọc: y0 phải đi từ trên xuống, hai câu kề nhau không được nuốt lẫn nhau, bbox câu cuối dừng trước đường kẻ/chân trang nếu chúng không thuộc câu hỏi.
 - Tính là hình: hình vẽ, sơ đồ mạch điện, đồ thị, bảng số liệu vẽ dạng hình, mặt phẳng nghiêng, con lắc, tia sáng, hình học không gian, biểu đồ.
 - KHÔNG tính là hình: công thức toán (dù dài), bảng chữ thuần, khung viền trang trí, logo trường, chữ ký, dấu mộc.
 - Cách khai báo: chèn [[IMG:1]] đúng chỗ hình xuất hiện trong "stem_latex" (đánh số từ 1, đếm riêng trong từng câu), rồi thêm một phần tử vào "images" có "slot" trùng số đó.
 - "bbox" là [x0, y0, x1, y1] chuẩn hoá 0-1 theo khổ trang (x0,y0 = góc trên trái). Ước lượng cho khít hình, chừa lề rộng ra một chút còn hơn cắt mất nét.
+- Trước khi trả về, tự kiểm tra bbox của từng hình phải nằm bên trong bbox của chính câu/group sở hữu nó. Nếu bbox hình đè sang câu kế tiếp hoặc chứa chữ/phương án không thuộc hình thì sửa lại; không khai báo crop mà bạn không xác định được chắc chắn.
 - "note" mô tả hình bằng tiếng Việt, một câu, đủ để người chưa thấy ảnh vẽ lại được. Ví dụ: "Mạch điện gồm R1 nối tiếp R2, nguồn U mắc hai đầu."
 - "caption" chỉ điền khi tài liệu có in chú thích dưới hình (ví dụ "Hình 2"). Không có thì để null.
 - "width_pct", "placement", "src" LUÔN LUÔN để null. Đó là phần giáo viên tự chỉnh trong app, bạn không được đoán hộ.
 - Hình nằm giữa phần dẫn đề và phương án thì [[IMG:1]] đặt ở cuối dẫn đề, không nhét vào giữa câu chữ.
 - Một câu có hai hình thì [[IMG:1]] và [[IMG:2]], khai báo đủ hai phần tử.
 - Không thấy hình nào thì "images" là mảng rỗng. Đừng khai khống — nhãn "Có hình" sai làm giáo viên mở ra rồi chẳng thấy gì.
+
+CÂU HỎI NHÓM — MỘT CỤM DỮ LIỆU DÙNG CHUNG CHO NHIỀU CÂU
+- Mỗi câu phải có "printed_number" đúng như số/ký hiệu in cạnh câu (ví dụ "60", "1", "2.3"); không thấy số thì null. Trường này dùng để nối câu với cụm dữ liệu và đáp án ở trang khác.
+- Nếu một đoạn văn, tình huống, bảng số liệu, biểu đồ hoặc hình được dùng chung cho từ 2 câu độc lập trở lên, tạo đúng MỘT phần tử trong "groups"; không chép lặp cụm dẫn vào từng "stem_latex" của câu.
+- Mỗi group có "ref" ngắn và duy nhất trong trang (g1, g2...), "label" là dòng nhãn in trên đề nếu có (ví dụ "Dựa vào thông tin sau để trả lời câu 12 đến 14"), "stem_latex" là toàn bộ cụm dữ liệu chung, "bbox" bao đúng vùng cụm dẫn, "images" theo cùng quy ước hình ở trên, và "question_numbers" liệt kê số câu mà cụm phục vụ (ví dụ ["60","61","62","63"]).
+- Mỗi câu con đặt "group_ref" bằng "ref" của group tương ứng. Câu đứng độc lập phải đặt "group_ref" = null. Không tạo group chỉ có một câu.
+- "bbox" của từng câu con chỉ bao phần riêng của câu đó và các phương án của nó; không lặp vùng cụm dữ liệu chung. "bbox" của group chỉ bao cụm dữ liệu chung, không nuốt các câu con.
+- Cụm dữ liệu có thể ở trang trước còn câu con ở trang sau. Vẫn khai "question_numbers" đầy đủ để pipeline nối xuyên trang; không chép lại cụm dữ liệu vào trang sau.
+- Nếu trang không có câu hỏi nhóm thì "groups" là mảng rỗng. Không tự dựng lại dữ liệu bị thiếu.
 
 PHÂN LOẠI DẠNG CÂU (theo cấu trúc đề THPT từ 2025)
 - MC: trắc nghiệm 4 phương án A/B/C/D, đúng một đáp án.

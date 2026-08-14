@@ -145,16 +145,24 @@ export const tex = (src, fmt) => texToRuns(src, rPr(fmt));
  * Không viền là CỐ Ý: đề thi Việt Nam xếp đầu đề hai cột và xếp phương án
  * thành lưới, nhưng không ai kẻ khung. Bảng ở đây chỉ để canh cột.
  */
-export function table(rows, widths) {
+export function table(rows, widths, opt = {}) {
   const grid = widths.map((w) => `<w:gridCol w:w="${Math.round(w * 94)}"/>`).join("");
   const body = rows.map((cells) =>
-    `<w:tr>${cells.map((c, i) =>
-      `<w:tc><w:tcPr><w:tcW w:w="${Math.round(widths[i] * 94)}" w:type="dxa"/>` +
+    `<w:tr>${cells.map((cell, i) => {
+      const spec = cell && typeof cell === "object" ? cell : { content:cell };
+      const shade = spec.fill ? `<w:shd w:val="clear" w:color="auto" w:fill="${X(spec.fill)}"/>` : "";
+      const border = spec.border || opt.cellBorder;
+      const tcBorders = border ? `<w:tcBorders>${["top","left","bottom","right"].map(side =>
+        `<w:${side} w:val="single" w:sz="${spec.borderSize || 6}" w:space="0" w:color="${X(border)}"/>`).join("")}</w:tcBorders>` : "";
+      return `<w:tc><w:tcPr><w:tcW w:w="${Math.round(widths[i] * 94)}" w:type="dxa"/>` +
       `<w:tcMar><w:left w:w="0" w:type="dxa"/><w:right w:w="60" w:type="dxa"/></w:tcMar>` +
-      `</w:tcPr>${c || p("")}</w:tc>`).join("")}</w:tr>`).join("");
+      `${shade}${tcBorders}</w:tcPr>${spec.content || p("")}</w:tc>`;
+    }).join("")}</w:tr>`).join("");
+  const tableBorder = opt.borderColor
+    ? ["top", "left", "bottom", "right", "insideH", "insideV"].map((s) => `<w:${s} w:val="single" w:sz="${opt.borderSize || 6}" w:space="0" w:color="${X(opt.borderColor)}"/>`).join("")
+    : ["top", "left", "bottom", "right", "insideH", "insideV"].map((s) => `<w:${s} w:val="none" w:sz="0" w:space="0"/>`).join("");
   return `<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/>` +
-    `<w:tblBorders>${["top", "left", "bottom", "right", "insideH", "insideV"]
-      .map((s) => `<w:${s} w:val="none" w:sz="0" w:space="0"/>`).join("")}</w:tblBorders>` +
+    `<w:tblBorders>${tableBorder}</w:tblBorders>` +
     `<w:tblLook w:val="0000" w:firstRow="0" w:lastRow="0" w:firstColumn="0" w:lastColumn="0"/>` +
     `</w:tblPr><w:tblGrid>${grid}</w:tblGrid>${body}</w:tbl>`;
 }
@@ -201,10 +209,13 @@ function imageRun(rid, widthPx, heightPx, name) {
  */
 export function buildDocx({ body, layout = {}, images = [], title = "Đề" }) {
   const L = {
-    marginTop: 2, marginRight: 2, marginBottom: 2, marginLeft: 3,
-    fontSize: 12, lineGap: 1.15, watermark: null, watermarkAngle: -30,
+    marginTop: 1, marginRight: 1, marginBottom: 1, marginLeft: 1,
+    fontSize: 12, lineGap: 1.15, fontFamily:"legacy", columns: 1,
+    watermark: null, watermarkAngle: -30,
     ...layout,
   };
+  const documentFont = L.fontFamily === "latex" ? "Latin Modern Roman"
+    : L.fontFamily === "sans" ? "Arial" : "Times New Roman";
 
   /* ── phần ảnh: mỗi ảnh một file trong word/media + một quan hệ ── */
   const media = [];
@@ -244,6 +255,9 @@ export function buildDocx({ body, layout = {}, images = [], title = "Đề" }) {
     `<w:pgMar w:top="${cm(L.marginTop)}" w:right="${cm(L.marginRight)}" ` +
     `w:bottom="${cm(L.marginBottom)}" w:left="${cm(L.marginLeft)}" ` +
     `w:header="708" w:footer="708" w:gutter="0"/>` +
+    // Đề hai cột: bản xem trước dùng `column-count:2`, Word phải khai ở sectPr,
+    // không thì file tải về luôn là một cột dù màn hình hiện hai.
+    (Number(L.columns) === 2 ? `<w:cols w:num="2" w:space="425" w:equalWidth="1"/>` : "") +
     `</w:sectPr>`;
 
   const document = `${HEAD}<w:document ${NS}><w:body>${body.join("")}${sect}</w:body></w:document>`;
@@ -252,7 +266,7 @@ export function buildDocx({ body, layout = {}, images = [], title = "Đề" }) {
      vì file xuất từ app và file xuất từ CLI phải giống hệt nhau. */
   const styles = `${HEAD}<w:styles ${NS}>` +
     `<w:docDefaults><w:rPrDefault><w:rPr>` +
-    `<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/>` +
+    `<w:rFonts w:ascii="${X(documentFont)}" w:hAnsi="${X(documentFont)}" w:cs="${X(documentFont)}"/>` +
     `<w:sz w:val="${half(L.fontSize)}"/><w:szCs w:val="${half(L.fontSize)}"/>` +
     `<w:lang w:val="vi-VN"/></w:rPr></w:rPrDefault>` +
     `<w:pPrDefault><w:pPr><w:spacing w:after="80" w:line="${Math.round(L.lineGap * 240)}" w:lineRule="auto"/></w:pPr></w:pPrDefault>` +

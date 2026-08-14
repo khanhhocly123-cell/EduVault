@@ -3,20 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>EduVault — ảnh chụp trang đề vào, file Word ra</title>
+<title>EduVault — từ đề scan đến Word và PDF LaTeX</title>
 <link rel="stylesheet" href="./styles.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'><rect width='256' height='256' rx='56' fill='%23e7e5fe'/><g fill='none' stroke='%235d5294' stroke-width='16'><rect x='42' y='80' width='172' height='136' rx='16'/><path d='M72 50h112M58 65h140'/></g></svg>">
 <style>
   /* Trang chủ chỉ dùng ở đây nên style để tại chỗ, khỏi phình styles.css. */
-  body{display:block;background:var(--surface);}
-  .wrap{max-width:1240px;margin:0 auto;padding:0 40px;}
+  body{display:block;background:#f6f7fc;}
+  .wrap{max-width:1320px;margin:0 auto;padding:0 40px;}
   .navbar{display:flex;align-items:center;gap:22px;height:60px;}
   .navbar a{font-size:14px;color:var(--acc-ink);text-decoration:none;}
   .navbar a:hover{text-decoration:underline;text-underline-offset:3px;}
 
-  .hero{display:grid;grid-template-columns:1.1fr .9fr;gap:56px;padding:52px 0 60px;
+  .hero{display:grid;grid-template-columns:.88fr 1.12fr;gap:54px;padding:62px 0 52px;
         align-items:center;}
-  .hero h1{font-size:52px;line-height:1.08;letter-spacing:-.022em;max-width:16ch;
+  .hero h1{font-size:58px;line-height:1.02;letter-spacing:-.038em;max-width:15ch;
         margin:14px 0 18px;}
   .hero .lead{font-size:17px;color:var(--ink-3);max-width:48ch;line-height:1.65;
         margin:0 0 28px;}
@@ -42,6 +42,28 @@
         font-variant-numeric:tabular-nums;}
   .steps p{margin:0;font-size:13.5px;color:var(--ink-2);}
   .steps b{color:var(--ink);font-weight:500;}
+
+  .hero-visual{position:relative;min-height:580px}.product-window{position:absolute;inset:0;border:1px solid #c7cce0;
+        border-radius:18px;background:#e8ebf6;box-shadow:0 26px 70px rgba(42,44,71,.2);overflow:hidden}
+  .windowbar{height:42px;display:flex;align-items:center;gap:7px;padding:0 14px;background:#f8f9ff;border-bottom:1px solid #d6d9e7}
+  .windowbar i{width:8px;height:8px;border-radius:50%;background:#b9bdd0}.windowbar span{margin-left:8px;font-size:11px;color:#73788e}
+  .demo-grid{display:grid;grid-template-columns:.88fr 1.12fr;height:calc(100% - 42px)}.scan-demo{position:relative;background:#dce0ec;padding:22px 16px}
+  .scan-page{height:100%;background:#fff;padding:21px 18px;font:12px/1.55 "Latin Modern Roman",serif;color:#232323;box-shadow:0 7px 22px rgba(30,35,50,.18)}
+  .scan-head{display:flex;justify-content:space-between;border-bottom:1px solid #222;padding-bottom:4px;font-size:9px}.scan-page h3{text-align:center;font-size:16px;margin:12px 0 15px}
+  .scan-question{margin:9px 0}.scan-options{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-size:10px;margin-top:4px}
+  .scan-chart{display:block;width:100%;height:126px;margin:8px auto}.ai-box{position:absolute;left:29px;right:29px;top:96px;height:104px;border:2px solid #7060ca;background:rgba(112,96,202,.08);border-radius:4px}
+  .ai-box::before{content:"AI nhận đúng Câu 1 + hình";position:absolute;left:-2px;top:-21px;background:#6656be;color:#fff;padding:2px 7px;border-radius:4px 4px 0 0;font:700 8px/17px Inter,sans-serif;text-transform:uppercase;letter-spacing:.04em}
+  .review-demo{background:#f8f9ff;padding:18px;overflow:hidden}.review-top{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:10px;color:#777c90}.review-top b{color:#453b78}
+  .demo-q{background:#fff;border:1px solid #d7daea;border-radius:9px;padding:12px;margin-bottom:10px;font:12px/1.5 "Latin Modern Roman",serif;box-shadow:0 2px 8px rgba(40,43,67,.06)}
+  .demo-q .tag{display:inline-flex;font:700 8px Inter,sans-serif;color:#5d5294;background:#ebe8ff;padding:3px 6px;border-radius:4px;margin-bottom:6px}.demo-q b{display:inline}
+  .demo-q img,.demo-fig{width:100%;height:82px;object-fit:contain;margin-top:6px}.demo-mc{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-top:7px}.demo-mc span{border:1px solid #d5d9e5;border-radius:5px;padding:4px 6px}
+  .demo-tf{display:grid;grid-template-columns:1fr 34px 34px;border:1px solid #222;margin-top:6px}.demo-tf>*{padding:3px 5px;border-right:1px solid #222;border-bottom:1px solid #222}.demo-tf>*:nth-child(3n){border-right:0}
+  .float-badge{position:absolute;right:-14px;bottom:22px;padding:10px 13px;border-radius:10px;background:#fff;border:1px solid #d2d5e4;box-shadow:0 10px 28px rgba(40,43,67,.2);font-size:11px;color:#565a6d}.float-badge b{display:block;color:#2c6b4b;font-size:13px}
+  .showcase{padding:28px 0 64px}.showcase-head{display:flex;align-items:end;gap:18px;margin-bottom:20px}.showcase-head h2{font-size:36px;max-width:17ch}.showcase-head p{margin:0 0 3px;max-width:52ch;color:var(--ink-3)}
+  .question-gallery{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.q-preview{min-height:280px;border:1px solid var(--line);border-radius:13px;background:#fff;padding:16px;font:13px/1.55 "Latin Modern Roman",serif;box-shadow:0 8px 24px rgba(40,43,67,.08)}
+  .q-preview .preview-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font:600 10px Inter,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#6e7388}.preview-label i{font-style:normal;background:#efedff;color:#5d5294;padding:3px 6px;border-radius:4px}
+  .q-preview .img-stage{height:112px;border-radius:7px;background:#f4f5fa;display:grid;place-items:center;margin:10px 0;overflow:hidden}.img-stage svg{width:95%;height:100%}
+  .q-preview .mini-opts{display:grid;grid-template-columns:1fr 1fr;gap:4px}.mini-opts span{padding:4px;border:1px solid #d6d9e4;border-radius:4px}.short-boxes{display:flex;gap:0;margin-top:12px}.short-boxes i{width:28px;height:30px;border:1px solid #777;margin-left:-1px}.essay-lines{height:96px;margin-top:10px;background:repeating-linear-gradient(#fff 0,#fff 23px,#ccd1dc 24px)}
 
   .authwrap{display:grid;grid-template-columns:1.1fr .9fr;gap:56px;padding:0 0 60px;
         align-items:start;}
@@ -88,7 +110,14 @@
     .wrap{padding:0 20px;}
     .hero,.authwrap{grid-template-columns:1fr;gap:32px;padding-top:28px;}
     .hero h1{font-size:34px;}
-    .tiers{grid-template-columns:1fr;} .tier.top{order:-1;}
+    .tiers{grid-template-columns:1fr;} .tier.top{order:-1;}.hero-visual{min-height:560px}.question-gallery{grid-template-columns:1fr 1fr}
+  }
+  @media(max-width:620px){
+    html,body{overflow-x:hidden}.wrap{padding:0 20px}.question-gallery{grid-template-columns:1fr}
+    .hero-visual{min-height:650px}.demo-grid{grid-template-columns:1fr}.scan-demo{display:none}
+    .navbar{gap:10px}.navbar>a,.navbar>button:not(.btn-primary){display:none}.navbar .btn-primary{padding-inline:11px;white-space:nowrap}
+    .hero-actions{display:grid!important;grid-template-columns:1fr;margin-bottom:26px!important}.hero-actions>*{justify-content:center;min-width:0}
+    .float-badge{right:8px}.showcase-head{align-items:start;flex-direction:column}.showcase-head .grow{display:none}
   }
 </style>
 </head>
@@ -105,6 +134,7 @@
     </div>
     <div class="grow"></div>
     <a href="#cach">Cách hoạt động</a>
+    <a href="#preview">Preview dạng câu</a>
     <a href="#gia">Bảng giá</a>
     <button class="btn" type="button" onclick="document.getElementById('em').focus()">Đăng nhập</button>
     <button class="btn btn-primary" type="button" data-pick="lite">Dùng thử miễn phí</button>
@@ -112,59 +142,49 @@
 
   <section class="hero">
     <div>
-      <span class="cap" style="color:var(--acc-ink)">Cho gia sư Toán — Lý độc lập</span>
-      <h1>Ảnh chụp trang đề vào. File Word ra.</h1>
-      <p class="lead">Công thức mở lên trong Word là sửa được ngay, không phải ảnh.
-        Câu hỏi vào kho riêng của bạn, gắn sẵn chuyên đề và độ khó.
-        Ráp đề đúng cấu trúc 2025 trong năm phút.</p>
-      <div style="display:flex;gap:10px;margin-bottom:32px">
-        <button class="btn btn-primary" type="button" style="font-size:15px;padding:10px 18px"
-                data-pick="plus">Nạp thử một trang</button>
-        <button class="btn" type="button" style="font-size:15px;padding:10px 18px"
-                data-pick="lite">Xem đề mẫu xuất ra</button>
+      <span class="cap" style="color:var(--acc-ink)">Exam OS cho THPT · ĐGNL · TSA · HSA</span>
+      <h1>Từ đề scan đến đề thi mang format của riêng bạn.</h1>
+      <p class="lead">AI nhận đúng câu, cụm dữ liệu và hình minh họa. Bạn duyệt trên ảnh gốc,
+        lưu thành Kho rồi xuất Word chỉnh sửa hoặc PDF LaTeX sắc nét — không phải gõ lại từng công thức.</p>
+      <div class="hero-actions" style="display:flex;gap:10px;margin-bottom:32px">
+        <button class="btn btn-primary" type="button" style="font-size:15px;padding:10px 18px" data-pick="plus">Tạo Kho và thử ngay</button>
+        <a class="btn" style="font-size:15px;padding:10px 18px;text-decoration:none" href="#preview">Xem khả năng hiển thị</a>
       </div>
       <div class="facts">
-        <div><b>18 · 4 · 6</b><span>đúng cấu trúc đề 2025</span></div>
-        <div><b>1 lượt</b><span>quét một trang tài liệu</span></div>
-        <div><b>Riêng tư</b><span>không ai xem được kho của bạn</span></div>
+        <div><b>4 dạng</b><span>TN · Đ/S · TLN · tự luận</span></div>
+        <div><b>Ảnh thật</b><span>crop và gắn vào đúng câu</span></div>
+        <div><b>2 đầu ra</b><span>Word editable · PDF LaTeX</span></div>
       </div>
     </div>
 
-    <div id="cach">
-      <div class="swap">
-        <div class="paper scan">
-          <div style="opacity:.65">Câu 5. Một con lắc lò xo gồm vật nhỏ khối lượng m = 100 g
-            gắn với lò xo nhẹ độ cứng k = 40 N/m. Tần số góc của dao động bằng</div>
-          <div style="opacity:.65;padding-left:10px">A. 20 rad/s&nbsp;&nbsp;B. 200 rad/s</div>
-          <div style="opacity:.65;padding-left:10px">C. 4 rad/s&nbsp;&nbsp;&nbsp;&nbsp;D. 400 rad/s</div>
-          <div style="opacity:.4;margin-top:8px">Câu 6. Sóng cơ truyền trên dây với tốc độ v = 20 m/s…</div>
-          <span class="stamp">Ảnh chụp bằng điện thoại</span>
-        </div>
-        <svg width="30" height="30" viewBox="0 0 256 256" fill="none" stroke="#796cbf"
-             stroke-width="16" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M40 128h176M160 72l56 56-56 56"></path></svg>
-        <div class="paper out">
-          <div><b style="display:inline">Câu 5.</b> Một con lắc lò xo gồm vật nhỏ khối lượng
-            <i>m</i> = 100 g gắn với lò xo nhẹ độ cứng <i>k</i> = 40 N/m. Tần số góc của dao động bằng</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 8px;margin-top:2px">
-            <div><b style="display:inline">A.</b> 20 rad/s</div><div><b style="display:inline">B.</b> 200 rad/s</div>
-            <div><b style="display:inline">C.</b> 4 rad/s</div><div><b style="display:inline">D.</b> 400 rad/s</div>
-          </div>
-          <div style="margin-top:8px;padding:4px 6px;border-radius:2px;background:var(--acc-tint);
-                      font-size:10px;font-family:var(--sans);color:var(--acc-ink)">
-            ω = √(k/m) — equation của Word, click vào sửa được</div>
-          <span class="stamp">de-giua-ki-1.docx</span>
-        </div>
-      </div>
+    <div class="hero-visual" id="cach">
+      <div class="product-window"><div class="windowbar"><i></i><i></i><i></i><span>EduVault · AI Review</span></div>
+        <div class="demo-grid"><div class="scan-demo"><div class="scan-page">
+          <div class="scan-head"><span>GIẢI TÍCH HCMUT</span><span>Trang 1/4</span></div><h3>ĐỀ THI CUỐI KỲ</h3>
+          <div class="scan-question"><b>Câu 1.</b> Cho hàm số <i>f(x)=x²−4x+3</i>. Chọn đáp án đúng.</div>
+          <svg class="scan-chart" viewBox="0 0 260 120" aria-label="Đồ thị hàm số"><path d="M20 94H244M55 108V12" stroke="#333"/><path d="M28 18 Q118 150 222 18" fill="none" stroke="#315fc6" stroke-width="2"/><text x="227" y="89" font-size="9">x</text><text x="61" y="18" font-size="9">y</text></svg>
+          <div class="scan-options"><span>A. −2</span><span>B. −1</span><span>C. 0</span><span>D. 1</span></div>
+          <div class="scan-question" style="opacity:.5"><b>Câu 2.</b> Xét tính đúng sai của các phát biểu…</div>
+        </div><div class="ai-box"></div></div>
+        <div class="review-demo"><div class="review-top"><b>AI đọc ra</b><span>· ảnh và câu đã khớp</span></div>
+          <div class="demo-q"><span class="tag">TRẮC NGHIỆM + HÌNH</span><div><b>Câu 1.</b> Cho hàm số <i>f(x)=x²−4x+3</i>.</div>
+            <svg class="demo-fig" viewBox="0 0 260 90"><path d="M18 70H244M50 82V8" stroke="#333"/><path d="M26 11 Q112 112 218 11" fill="none" stroke="#315fc6" stroke-width="2"/></svg>
+            <div class="demo-mc"><span>A. −2</span><span>B. −1</span><span>C. 0</span><span>D. 1</span></div></div>
+          <div class="demo-q"><span class="tag">ĐÚNG – SAI · TABULAR</span><div class="demo-tf"><b>Phát biểu</b><b>Đ</b><b>S</b><span>a) Hàm xác định trên ℝ</span><span>□</span><span>□</span><span>b) f'(x)=2x−4</span><span>□</span><span>□</span></div></div>
+        </div></div></div><div class="float-badge"><b>✓ Hình crop đúng câu</b>Word editable · PDF LaTeX</div>
+    </div>
+  </section>
 
-      <div class="steps">
-        <div><i>01</i><p><b>Không gõ lại công thức nữa.</b>
-          AI nhập liệu, đánh dấu chỗ không chắc; bạn là người duyệt trước khi câu vào kho.</p></div>
-        <div><i>02</i><p><b>Tìm lại được câu đã dùng.</b>
-          Mỗi câu gắn nguồn, chuyên đề, độ khó và số đề đã dùng.</p></div>
-        <div><i>03</i><p><b>Bốn file từ một đề.</b>
-          Đề, đáp án, lời giải chi tiết, ma trận đặc tả.</p></div>
-      </div>
+  <section class="showcase" id="preview"><div class="showcase-head"><h2>Một engine, đủ mọi dạng đề.</h2><div class="grow"></div><p>Từ câu có đồ thị đến cụm dữ liệu nhiều câu: hình vẫn là asset thật, công thức vẫn sắc nét và form trả lời thay đổi theo preset.</p></div>
+    <div class="question-gallery">
+      <article class="q-preview"><div class="preview-label"><span>Trắc nghiệm</span><i>có hình</i></div><b>Câu 12.</b> Đồ thị nào biểu diễn đúng chuyển động của vật?
+        <div class="img-stage"><svg viewBox="0 0 260 100"><path d="M22 78H244M42 90V8" stroke="#333"/><path d="M42 78 C78 76 92 22 132 25 S190 78 232 30" fill="none" stroke="#6b56c4" stroke-width="3"/><text x="234" y="73" font-size="10">t</text><text x="48" y="13" font-size="10">v</text></svg></div><div class="mini-opts"><span>A. (I)</span><span>B. (II)</span><span>C. (III)</span><span>D. (IV)</span></div></article>
+      <article class="q-preview"><div class="preview-label"><span>Đúng – Sai</span><i>tabular</i></div><b>Câu 2.</b> Dựa vào hình bên, xét các phát biểu.
+        <div class="img-stage"><svg viewBox="0 0 220 100"><circle cx="110" cy="52" r="34" fill="none" stroke="#222"/><path d="M55 82L110 18L172 82Z" fill="none" stroke="#315fc6" stroke-width="2"/><text x="105" y="14" font-size="10">A</text><text x="48" y="92" font-size="10">B</text><text x="176" y="92" font-size="10">C</text></svg></div><div class="demo-tf"><b>Phát biểu</b><b>Đ</b><b>S</b><span>a) AB=AC</span><span>□</span><span>□</span><span>b) ∠B=∠C</span><span>□</span><span>□</span></div></article>
+      <article class="q-preview"><div class="preview-label"><span>Trả lời ngắn</span><i>4 ô</i></div><b>Câu 3.</b> Đọc giá trị cực đại trên đồ thị rồi ghi kết quả.
+        <div class="img-stage"><svg viewBox="0 0 240 100"><path d="M18 78H225M38 90V8" stroke="#333"/><path d="M38 70 Q92 12 148 46 T220 22" fill="none" stroke="#16816d" stroke-width="3"/><path d="M148 46V78" stroke="#999" stroke-dasharray="3"/></svg></div><div class="short-boxes"><i></i><i></i><i></i><i></i></div></article>
+      <article class="q-preview"><div class="preview-label"><span>Tự luận</span><i>vùng làm bài</i></div><b>Câu 4.</b> Chứng minh hệ thức và trình bày đầy đủ các bước biến đổi.
+        <div class="img-stage"><svg viewBox="0 0 220 100"><path d="M42 82L108 14L182 82Z" fill="none" stroke="#222" stroke-width="2"/><path d="M108 14L108 82M72 52L150 52" stroke="#b82165"/><circle cx="108" cy="52" r="25" fill="none" stroke="#315fc6"/></svg></div><div class="essay-lines"></div></article>
     </div>
   </section>
 
@@ -173,7 +193,7 @@
       <h2 style="font-size:25px;margin-bottom:12px">Vào kho đề của bạn</h2>
       <p style="margin:0;font-size:14px;color:var(--ink-3);max-width:56ch;line-height:1.7">
         Đây là bản pilot chạy dữ liệu thật: tài khoản, tài liệu và kho câu hỏi được lưu riêng
-        trên máy chủ local của EduVault.</p>
+        trên instance EduVault của bạn.</p>
     </div>
 
     <div class="authcard">
@@ -205,7 +225,7 @@
         <div class="or">hoặc</div>
         <button class="btn btn-block" type="button" id="btnAuthMode">Tạo tài khoản mới</button>
         <p style="margin:0;text-align:center;font-size:13px;color:var(--ink-4)">
-          Pilot local · chưa bật Google OAuth và thanh toán.</p>
+          Pilot beta · chưa bật Google OAuth và thanh toán.</p>
       </form>
     </div>
   </section>

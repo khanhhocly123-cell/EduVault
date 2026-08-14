@@ -257,6 +257,9 @@ const Q = (o) => ({
   subject: subjectOfTopic(o.topic), ...o
 });
 
+/** Thực thể nhóm câu dùng chung; câu con trong BANK chỉ giữ groupId. */
+export const GROUPS = [];
+
 export const BANK = [
   /* ═══════════════════════════ VẬT LÍ ═══════════════════════════ */
   Q({type:"MC",diff:"TH",topic:"p11.oscillation",src:"Ninh Bình 2024",ai:true,fig:"spring",grade:11,
@@ -462,7 +465,8 @@ export const SOURCES = [
 export const HEADER_TEMPLATES = [
   { id:"so",   name:"Chuẩn Sở GD",  desc:"Hai cột, kiểu đề chính thức" },
   { id:"gon",  name:"Gọn một dòng", desc:"Cho bài kiểm tra 15 phút" },
-  { id:"logo", name:"Có logo",      desc:"Trung tâm, trường tư" }
+  { id:"logo", name:"Có logo",      desc:"Trung tâm, trường tư" },
+  { id:"bk",   name:"BK / HCMUT",   desc:"Đầu trang kẻ mảnh, font LaTeX" }
 ];
 
 export const DEFAULT_HEADER = {
@@ -473,10 +477,35 @@ export const DEFAULT_HEADER = {
 
 /* Trình bày trang in. Lề tính bằng cm — đúng đơn vị Word hiện trong hộp
    Page Setup, để giáo viên đối chiếu được với quy định của trường.
-   Mặc định lấy theo `phase0/src/reference.ts`: trái 3cm, còn lại 2cm. */
+   Mặc định mới cho mọi Kho là 1cm ở cả bốn phía. */
 export const DEFAULT_LAYOUT = {
-  marginTop:2, marginRight:2, marginBottom:2, marginLeft:3,
-  columns:1,            // 1 hoặc 2 cột
+  marginVersion:2,
+  marginTop:1, marginRight:1, marginBottom:1, marginLeft:1,
+    columns:1,            // 1 hoặc 2 cột
+    questionStyle:"classic", // classic | exam-blue | specialist-pink | logic-green
+  presetName:"Mẫu riêng",
+  fontFamily:"legacy",   // legacy | latex | sans
+  accentColor:"#287faf",
+  accentSoft:"#edf7fc",
+  borderColor:"#88bad4",
+  sectionHeading:"plain", // plain | bar | outline
+  showTypeLabel:true,
+  mcColumns:1,
+  mcStyle:"plain",       // plain | circle | cards | tabular
+  tfStyle:"list",        // list | table
+  shortBoxCount:1,
+  shortStyle:"boxes",    // boxes | line
+  shortWorkLines:5,
+  shortWorkLabel:"Phần trình bày / ghi chú",
+  essayWorkLines:10,
+  essayWorkLabel:"Bài làm",
+  essayStyle:"lines",    // lines | blank
+  topNote:"",
+  bottomNote:"",
+  topImage:null,
+  bottomImage:null,
+  referenceAsset:null,
+  referenceName:"",
   fontSize:12,          // pt, cỡ chữ thân đề
   lineGap:1.15,         // giãn dòng
   logo:null,            // data URL ảnh logo trường
@@ -485,6 +514,50 @@ export const DEFAULT_LAYOUT = {
   watermarkOpacity:8,   // %
   watermarkAngle:-30    // độ
 };
+
+/* Preset hệ thống chỉ là cấu hình khởi đầu: áp dụng xong giáo viên vẫn sửa
+   từng trường rồi lưu thành preset riêng trong Kho. */
+export const BUILTIN_LAYOUT_PRESETS = [
+  {
+    id:"builtin-current", name:"Hiện tại", badge:"Đa năng",
+    desc:"Card rõ ràng cho THPT/ĐGNL; đủ TN, Đúng–Sai, TLN và tự luận.",
+    layout:{
+      presetName:"Hiện tại", questionStyle:"exam-blue", fontFamily:"legacy",
+      sectionHeading:"bar", showTypeLabel:true, mcColumns:1, mcStyle:"cards",
+      tfStyle:"table", shortStyle:"boxes", shortBoxCount:4, shortWorkLines:5,
+      essayStyle:"lines", essayWorkLines:10,
+      accentColor:"#287faf", accentSoft:"#edf7fc", borderColor:"#88bad4"
+    }
+  },
+  {
+    id:"builtin-legacy", name:"Legacy", badge:"Gọn",
+    desc:"Bố cục đề truyền thống, ít khung màu, tối ưu số câu trên một trang.",
+    layout:{
+      presetName:"Legacy", questionStyle:"classic", fontFamily:"legacy",
+      sectionHeading:"plain", showTypeLabel:false, mcColumns:2, mcStyle:"plain",
+      tfStyle:"list", shortStyle:"line", shortBoxCount:1, shortWorkLines:0,
+      essayStyle:"lines", essayWorkLines:8
+    },
+    header:{ tmpl:"so" }
+  },
+  {
+    id:"builtin-bk", name:"BK", badge:"LaTeX",
+    desc:"Latin Modern thật, đầu trang kẻ mảnh, phương án khoanh trong ô tròn kiểu HCMUT.",
+    layout:{
+      presetName:"BK", questionStyle:"classic", fontFamily:"latex",
+      fontSize:12, lineGap:1.32, sectionHeading:"plain", showTypeLabel:false,
+      // Đề HCMUT in sẵn ô tròn quanh chữ cái để sinh viên khoanh thẳng lên đề.
+      mcColumns:2, mcStyle:"circle", tfStyle:"tabular", shortStyle:"line",
+      shortBoxCount:1, shortWorkLines:0, essayStyle:"blank", essayWorkLines:12,
+      accentColor:"#111111", accentSoft:"#f7f7f7", borderColor:"#888888",
+      watermark:""
+    },
+    header:{
+      tmpl:"bk", org:'Khóa học: "Giải tích 2"', school:"Fanpage: GIẢI TÍCH HCMUT",
+      title:"ĐỀ THI CUỐI KỲ", subject:"", showCode:false, showId:false
+    }
+  }
+];
 
 /* ═══════════════════════════ CHỜ DUYỆT ═══════════════════════════
  *

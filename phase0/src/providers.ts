@@ -484,35 +484,61 @@ export class ChatProvider implements VisionProvider {
     }
 
     const started = Date.now();
-    const { data: res, response } = await this.client.chat.completions
-      .create({
-        model: splitModel(model).id,
-        messages: [
-          { role: "system", content: system },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: user },
-              { type: "image_url", image_url: { url: `data:${mediaType};base64,${data}` } },
-            ],
-          },
-        ],
-        max_completion_tokens: 16000,
-        response_format: zodResponseFormat(schema as never, "extraction"),
-      })
-      .withResponse();
+    const request = {
+      model: splitModel(model).id,
+      messages: [
+        { role: "system" as const, content: system },
+        {
+          role: "user" as const,
+          content: [
+            { type: "text" as const, text: user },
+            { type: "image_url" as const, image_url: { url: `data:${mediaType};base64,${data}` } },
+          ],
+        },
+      ],
+      max_completion_tokens: 16000,
+      response_format: zodResponseFormat(schema as never, "extraction"),
+    };
+
+    // Một trang đề có 10–20 câu có thể mất hơn một phút để sinh JSON. Ở chế độ
+    // non-stream, gateway không thấy byte nào trong thời gian đó và đôi lúc đóng
+    // socket; Node/undici trên Windows sau đó còn in assertion UV_HANDLE_CLOSING.
+    // Stream giữ kết nối có dữ liệu liên tục và vẫn ghép về đúng một JSON để parse.
+    let content = "";
+    let finishReason: string | null | undefined;
+    let usage: { prompt_tokens?: number; completion_tokens?: number; prompt_tokens_details?: { cached_tokens?: number } } | undefined;
+    let response: Response;
+    let responseModel = model;
+    if (this.id === "stali") {
+      const streamed = await this.client.chat.completions.create({
+        ...request, stream:true, stream_options:{ include_usage:true },
+      }).withResponse();
+      response = streamed.response;
+      for await (const chunk of streamed.data) {
+        content += chunk.choices?.[0]?.delta?.content ?? "";
+        finishReason = chunk.choices?.[0]?.finish_reason ?? finishReason;
+        usage = chunk.usage ?? usage;
+        responseModel = chunk.model || responseModel;
+      }
+    } else {
+      const completed = await this.client.chat.completions.create(request).withResponse();
+      response = completed.response;
+      const choice = completed.data.choices?.[0];
+      content = choice?.message?.content ?? "";
+      finishReason = choice?.finish_reason;
+      usage = completed.data.usage;
+      responseModel = completed.data.model || responseModel;
+    }
     const elapsedMs = Date.now() - started;
 
-    const choice = res.choices?.[0];
-    if (choice?.finish_reason === "length") {
+    if (finishReason === "length") {
       throw new Error(
         "Output bị cắt vì chạm giới hạn token. Trang này quá nhiều câu — cắt nhỏ hoặc tăng max_completion_tokens.",
       );
     }
-    const content = choice?.message?.content;
     if (!content) {
       throw new Error(
-        `Cổng ${this.cfg.label} trả về rỗng (finish_reason=${choice?.finish_reason ?? "?"}).`,
+        `Cổng ${this.cfg.label} trả về rỗng (finish_reason=${finishReason ?? "?"}).`,
       );
     }
 
@@ -526,10 +552,10 @@ export class ChatProvider implements VisionProvider {
       );
     }
 
-    const u = res.usage;
+    const u = usage;
     const cacheRead = u?.prompt_tokens_details?.cached_tokens ?? 0;
     // Giống nhà OpenAI: prompt_tokens ĐÃ GỒM phần cache, phải trừ kẻo tính hai lần.
-    const { costUsd, costKnown, freeTier } = costOf(res.model ?? model, {
+    const { costUsd, costKnown, freeTier } = costOf(responseModel, {
       freshInput: Math.max(0, (u?.prompt_tokens ?? 0) - cacheRead),
       output: u?.completion_tokens ?? 0,
       cacheRead,
@@ -544,7 +570,7 @@ export class ChatProvider implements VisionProvider {
     return {
       data: parsed,
       usage: {
-        model: response.headers.get("x-stali-model") ?? res.model ?? model,
+        model: response.headers.get("x-stali-model") ?? responseModel,
         inputTokens: u?.prompt_tokens ?? 0,
         outputTokens: u?.completion_tokens ?? 0,
         cacheReadTokens: cacheRead,

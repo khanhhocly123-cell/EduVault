@@ -5,6 +5,7 @@ import {
   PageExtraction,
   VerifyReport,
   validateQuestion,
+  validateQuestionGroups,
   type ExamDoc,
   type TQuestion,
   type TVerifyReport,
@@ -291,7 +292,10 @@ async function extract(file: string): Promise<TQuestion[]> {
   console.log(formatUsage(usage));
   console.log(`\n  trích được ${data.questions.length} câu`);
 
-  const problems = data.questions.flatMap((q, i) => validateQuestion(q, i));
+  const problems = [
+    ...data.questions.flatMap((q, i) => validateQuestion(q, i)),
+    ...validateQuestionGroups(data),
+  ];
   if (problems.length) {
     console.log("\n  Vấn đề cần giáo viên xem lại:");
     for (const p of problems) console.log(`    - ${p}`);
